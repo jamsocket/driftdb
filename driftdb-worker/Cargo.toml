@@ -2,6 +2,11 @@
 name = "driftdb-worker"
 version = "0.0.0"
 edition = "2018"
+description = "A real-time data backend for browser-based applications (Cloudflare worker)."
+license = "MIT"
+repository = "https://github.com/drifting-in-space/driftdb"
+homepage = "https://driftdb.com"
+documentation = "https://driftdb.com"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

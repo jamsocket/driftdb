@@ -2,6 +2,11 @@
 name = "driftdb-server"
 version = "0.1.0"
 edition = "2021"
+description = "A real-time data backend for browser-based applications (server binary)."
+license = "MIT"
+repository = "https://github.com/drifting-in-space/driftdb"
+homepage = "https://driftdb.com"
+documentation = "https://driftdb.com"
 
 [dependencies]
 anyhow = "1.0.68"
