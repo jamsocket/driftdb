@@ -28,6 +28,7 @@ ENV PATH=/home/vscode/.cargo/bin:$PATH
 # Helpful CLI tools (non-root installs)
 RUN cargo install tokei
 RUN cargo install du-dust
+RUN cargo install cargo-workspaces
 
 RUN rustup target add wasm32-unknown-unknown
 

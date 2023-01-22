@@ -21,7 +21,5 @@ jobs:
 
     - name: Build
       run: cargo build --verbose
-      working-directory: driftdb
     - name: Run tests
       run: cargo test --verbose
-      working-directory: driftdb
