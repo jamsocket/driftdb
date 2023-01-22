@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 RUN apt-get update
-RUN apt-get install -y build-essential
+RUN apt-get install -y build-essential pkg-config libssl-dev
 
 # Install node
 RUN curl -sL https://deb.nodesource.com/setup_19.x | sh
