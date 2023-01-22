@@ -1,0 +1,163 @@
+use chrono::Utc;
+use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use std::collections::HashMap;
+use tokio_stream::StreamExt;
+use worker::*;
+
+mod utils;
+
+pub fn cors() -> Cors {
+    Cors::new()
+        .with_methods(vec![Method::Post, Method::Get, Method::Options])
+        .with_origins(vec!["*"])
+}
+
+fn room_result(req: Request, room_id: &str) -> Result<Response> {
+    let host = req
+        .headers()
+        .get("Host")?
+        .ok_or_else(|| worker::Error::JsError("No Host header provided.".to_string()))?;
+    let response_body = serde_json::to_string(&serde_json::json!({
+        "room": room_id,
+        "url": format!("wss://{}/room/{}/connect", host, room_id),
+    }))?;
+
+    Response::ok(response_body)
+}
+
+pub fn handle_room(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(id) = ctx.param("room_id") {
+        room_result(req, id)
+    } else {
+        Response::error("Bad Request", 400)
+    }
+}
+
+/// Generate a random alphanumeric room ID.
+fn random_room_id(length: usize) -> String {
+    thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(length)
+        .map(char::from)
+        .collect()
+}
+
+pub fn handle_new_room(req: Request, _: RouteContext<()>) -> Result<Response> {
+    let room_id = random_room_id(24);
+    room_result(req, &room_id)
+}
+
+pub async fn handle_connect(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(id) = ctx.param("room_id") {
+        let namespace = ctx.durable_object("DATABASE")?;
+        let stub = namespace.id_from_name(id)?.get_stub()?;
+        stub.fetch_with_request(req).await
+    } else {
+        Response::error("Bad Request", 400)
+    }
+}
+
+#[cfg(feature = "fetch-event")]
+#[event(fetch)]
+pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
+    utils::set_panic_hook();
+    let router = Router::new();
+
+    let response = router
+        .get("/", |_, _| Response::ok("DriftDB Worker service."))
+        .post("/new", handle_new_room)
+        .get("/room/:room_id", handle_room)
+        .get_async("/room/:room_id/connect", handle_connect)
+        .run(req, env)
+        .await?;
+
+    response.with_cors(&cors())
+}
+
+#[durable_object]
+pub struct DbRoom {
+    #[allow(unused)]
+    state: State,
+    db: Database,
+}
+
+/// A raw WebSocket is not Send or Sync, but that doesn't matter because we are compiling
+/// to WebAssembly, which is single-threaded.
+struct WrappedWebSocket(WebSocket);
+unsafe impl Send for WrappedWebSocket {}
+unsafe impl Sync for WrappedWebSocket {}
+
+#[durable_object]
+impl DurableObject for DbRoom {
+    fn new(state: State, _: Env) -> Self {
+        Self {
+            state,
+            db: Database::new(),
+        }
+    }
+
+    async fn fetch(&mut self, req: Request) -> Result<Response> {
+        let WebSocketPair { client, server } = WebSocketPair::new()?;
+        server.accept()?;
+
+        let db = self.db.clone();
+
+        let url = req.url()?;
+
+        let query: HashMap<String, String> = url
+            .query_pairs()
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+
+        let debug = query.get("debug").map(|s| s == "true").unwrap_or(false);
+
+        wasm_bindgen_futures::spawn_local(async move {
+            let mut event_stream = server.events().expect("could not open stream");
+
+            let conn = {
+                let server = WrappedWebSocket(server.clone());
+                let callback = move |message: &MessageFromDatabase| {
+                    server
+                        .0
+                        .send_with_str(
+                            serde_json::to_string(&message).expect("Could not encode message."),
+                        )
+                        .expect("could not send message");
+                };
+
+                if debug {
+                    db.connect_debug(callback)
+                } else {
+                    db.connect(callback)
+                }
+            };
+
+            while let Some(event) = event_stream.next().await {
+                match event.expect("received error in websocket") {
+                    WebsocketEvent::Message(msg) => {
+                        if let Some(text) = msg.text() {
+                            if let Ok(message) = serde_json::from_str::<MessageToDatabase>(&text) {
+                                conn.send_message(&message, Utc::now()).unwrap();
+                            } else {
+                                server
+                                    .send_with_str(
+                                        &serde_json::to_string(&MessageFromDatabase::Error {
+                                            message: format!("Could not decode message: {}", text),
+                                        })
+                                        .unwrap(),
+                                    )
+                                    .unwrap();
+                            }
+                        }
+                    }
+                    WebsocketEvent::Close(_) => {
+                        break;
+                    }
+                }
+            }
+        });
+
+        Response::from_websocket(client)?.with_cors(&cors())
+    }
+}

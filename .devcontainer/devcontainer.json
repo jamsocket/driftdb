@@ -1,0 +1,18 @@
+{
+	"name": "Ubuntu",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"remoteUser": "vscode",
+	"settings": {
+		"terminal.integrated.defaultProfile.linux": "zsh", 
+        "terminal.integrated.profiles.linux": {
+            "zsh": {
+                "path": "/bin/zsh"
+            },
+        }
+	},
+	"extensions": [
+        "rust-lang.rust-analyzer",
+	],
+}

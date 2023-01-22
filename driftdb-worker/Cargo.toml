@@ -1,0 +1,26 @@
+[package]
+name = "driftdb-worker"
+version = "0.0.0"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook", "fetch-event"]
+fetch-event = []
+
+[dependencies]
+cfg-if = "0.1.2"
+chrono = "0.4.23"
+console_error_panic_hook = { version = "0.1.1", optional = true }
+driftdb = {path = "../driftdb"}
+getrandom = { version = "0.2.8", features = ["js"] }
+rand = "0.8.5"
+serde_json = "1.0.67"
+tokio-stream = "0.1.11"
+worker = "0.0.11"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"

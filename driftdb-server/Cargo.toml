@@ -1,0 +1,18 @@
+[package]
+name = "driftdb-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.68"
+axum = { version = "0.6.1", features = ["ws"] }
+chrono = { version = "0.4.23", features = ["serde"] }
+clap = { version = "4.0.32", features = ["derive"] }
+hyper = "0.14.23"
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = "1.0.91"
+tokio = { version = "1.23.0", features = ["macros", "rt-multi-thread"] }
+tower-http = { version = "0.3.5", features = ["trace", "cors", "fs"] }
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+driftdb = {path = "../driftdb"}
