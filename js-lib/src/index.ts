@@ -95,6 +95,10 @@ export class DbConnection {
         this.connection.onclose = () => {
             this.setStatus(false)
 
+            console.log("Connection closed, attempting to reconnect...")
+
+            this.connect(dbUrl)
+
             this.reconnectLoopHandle = window.setInterval(() => {
                 this.connect(dbUrl)
             }, 100)
