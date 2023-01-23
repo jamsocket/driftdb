@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "driftdb-worker"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "cfg-if 0.1.10",
  "chrono",
