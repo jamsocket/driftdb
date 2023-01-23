@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ConnectionStatus, DbConnection } from 'driftdb';
+import { DbConnection } from 'driftdb';
 
 interface StatusIndicatorProps {
     database: DbConnection;

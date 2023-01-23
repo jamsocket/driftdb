@@ -1,47 +1,4 @@
-type LaxSubject = string | Array<string>
-type Subject = Array<string>
-type SequenceNumber = number
-
-export type Action = {type: 'Append' | 'Replace' | 'Relay'} | {type: 'Compact', seq: SequenceNumber}
-
-export interface SequenceValue {
-    value: any
-    seq: SequenceNumber
-}
-
-export type MessageFromDb = {
-    type: 'Push',
-    key: Subject,
-    value: SequenceValue,
-} | {
-    type: 'Init',
-    prefix: Subject,
-    data: Array<[Subject, Array<SequenceValue>]>
-} | {
-    type: 'Error',
-    message: string
-} | {
-    type: 'SubjectSize',
-    key: Subject,
-    size: number
-}
-
-export type MessageToDb = {
-    type: 'Push'
-    action: Action
-    value: any
-    key: LaxSubject
-} | {
-    type: 'Dump'
-    prefix: LaxSubject
-}
-
-export type ConnectionStatus = {
-    connected: false
-} | {
-    connected: true
-    debugUrl: string
-}
+import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Subject } from "./types"
 
 export class EventListener<T> {
     listeners: Array<(event: T) => void> = []
@@ -130,17 +87,17 @@ export class DbConnection {
             this.messageListener.dispatch(message)
 
             switch (message.type) {
-                case 'Init':
+                case 'init':
                     message.data.forEach(([key, values]) => {
                         values.forEach(value => {
                             this.subscriptions.dispatch(key, value)
                         })
                     })
                     break
-                case 'Push':
+                case 'push':
                     this.subscriptions.dispatch(message.key, message.value)
                     break
-                case 'SubjectSize':
+                case 'subject_size':
                     this.sizeSubscriptions.dispatch(message.key, message.size)
                     break
             }
@@ -178,7 +135,7 @@ export class DbConnection {
         if (sizeCallback) {
             this.sizeSubscriptions.subscribe(subject, sizeCallback)
         }
-        this.send({type: 'Dump', prefix: subject})
+        this.send({type: 'dump', prefix: subject})
     }
 
     unsubscribe(subject: Subject, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
