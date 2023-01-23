@@ -10,7 +10,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "driftdb": "file:../js-lib"
+    "driftdb": "1.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.27",

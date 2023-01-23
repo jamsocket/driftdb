@@ -1,6 +1,6 @@
 import { DRIFTDB_URL } from '@/config'
 import Head from 'next/head'
-import { DriftDBProvider, RoomQRCode, StatusIndicator, useDatabase, useSharedReducer, useUniqueClientId } from 'driftdb-react'
+import { DriftDBProvider, RoomQRCode, StatusIndicator, useSharedReducer, useUniqueClientId } from 'driftdb-react'
 
 enum Player {
     X = 1,
