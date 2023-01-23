@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
-import { ConnectionStatus, DbConnection, SequenceValue } from "driftdb"
+import { DbConnection } from "driftdb"
 import { Api, RoomResult } from "driftdb/dist/api"
+import { ConnectionStatus, SequenceValue } from "driftdb/dist/types";
 
 const ROOM_ID_KEY = "_driftdb_room"
 const CLIENT_ID_KEY = "_driftdb_client_id"
@@ -21,7 +22,7 @@ export function useSharedState<T>(key: string, initialValue: T): [T, (value: T) 
 
     const setStateOptimistic = (value: T) => {
         setState(value);
-        db?.send({ type: "Push", action: { "type": "Replace" }, value, key: [key] });
+        db?.send({ type: "push", action: { "type": "replace" }, value, key: [key] });
     };
 
     React.useEffect(() => {
@@ -64,7 +65,7 @@ export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: 
     const dispatch = (action: any) => {
         const value = reducer(state, action);
         setState(value);
-        db?.send({ type: "Push", action: { "type": "Append" }, value: { "apply": action }, key: [key] });
+        db?.send({ type: "push", action: { "type": "append" }, value: { "apply": action }, key: [key] });
     };
 
     React.useEffect(() => {
@@ -92,8 +93,8 @@ export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: 
         const sizeCallback = (size: number) => {
             if (size > sizeThreshold && lastConfirmedSeq.current !== null) {
                 db?.send({
-                    type: "Push",
-                    action: { "type": "Compact", seq: lastConfirmedSeq.current },
+                    type: "push",
+                    action: { "type": "compact", seq: lastConfirmedSeq.current },
                     value: { "reset": lastConfirmedState.current },
                     key: [key]
                 });
