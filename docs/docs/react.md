@@ -105,3 +105,7 @@ The `useDatabase` hook returns an instance of the DriftDB database itself. This 
 The `useUniqueClientId` hook returns a short string which can be used to uniquely identify the current client. This string is stored in session storage, so that it will persist across page reloads.
 
 `useUniqueClientId` is provided as a helper, but does not interact with the DriftDB database.
+
+## `<RoomQRCode />` component
+
+The `RoomQRCode` component displays a QR code encoding the URL of the current page, if it contains the ID of a DriftDB room. This provides an easy way to connect to rooms from a phone.
