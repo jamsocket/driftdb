@@ -4,7 +4,7 @@
 [![crates.io](https://img.shields.io/crates/v/driftdb.svg)](https://crates.io/crates/driftdb)
 [![docs.rs](https://img.shields.io/badge/rust-docs-brightgreen)](https://docs.rs/driftdb/)
 [![docs.rs](https://img.shields.io/badge/client-docs-brightgreen)](https://driftdb.com/)
-[![wokflow state](https://github.com/drifting-in-space/driftdb/workflows/build/badge.svg)](https://github.com/drifting-in-space/driftdb/actions/workflows/test.yml)
+[![Test](https://github.com/drifting-in-space/driftdb/actions/workflows/test.yml/badge.svg)](https://github.com/drifting-in-space/driftdb/actions/workflows/test.yml)
 
 DriftDB is a real-time data backend for browser-based applications.
 
