@@ -44,7 +44,7 @@ export function RoomQRCode() {
     }, [db])
 
     if (pageUrl) {
-        return <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${pageUrl}`} style={{ padding: 40 }} />
+        return <img src={`https://api.jamsocket.live/qrcode?url=${pageUrl}`} />
     } else {
         return null
     }
