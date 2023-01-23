@@ -1,6 +1,6 @@
 import { DRIFTDB_URL } from '@/config'
 import Head from 'next/head'
-import { DriftDBProvider, RoomQRCode, StatusIndicator, useSharedState } from '../components/driftdb-react'
+import { DriftDBProvider, RoomQRCode, StatusIndicator, useSharedState } from 'driftdb-react'
 
 function StateDemo() {
   const [text, setText] = useSharedState("input", "Hello, World!")

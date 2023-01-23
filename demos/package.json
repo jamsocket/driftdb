@@ -13,7 +13,7 @@
     "@types/node": "18.11.18",
     "@types/react": "18.0.26",
     "@types/react-dom": "18.0.10",
-    "driftdb": "file:../js-lib",
+    "driftdb-react": "file:../react-lib",
     "eslint": "8.31.0",
     "eslint-config-next": "13.1.2",
     "next": "13.1.2",

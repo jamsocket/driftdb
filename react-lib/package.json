@@ -1,0 +1,22 @@
+{
+  "name": "driftdb-react",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "driftdb": "file:../js-lib"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.27",
+    "typescript": "^4.9.4"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  }
+}
