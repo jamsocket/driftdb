@@ -18,6 +18,7 @@ function Message(props: MessageProps) {
 function App() {
   let [messages, setMessages] = useState<Array<MessageFromDb>>([])
   let [keyState, setKeyState] = useState<Record<string, Array<SequenceValue>>>({})
+  let [autoRefreshState, setAutoRefreshState] = useState(true)
 
   let db = useMemo(() => {
     // Check for URL in query string if it exists.
@@ -29,8 +30,10 @@ function App() {
       socketUrl = "ws://localhost:8080/api/ws"
     }
 
-    socketUrl += "?debug=true"
-    
+    if (autoRefreshState) {
+      socketUrl += "?debug=true"
+    }
+
     const db = new DbConnection()
     db.connect(socketUrl)
 
@@ -77,12 +80,30 @@ function App() {
     db.send(message);
   }, [db])
 
+  const refreshState = useCallback(() => {
+    db.send({
+      type: "dump",
+      prefix: [],
+    })
+  }, [])
+
   return (
     <div className="container mx-auto flex flex-col space-y-2 py-6">
       <div className="flex flex-row space-x-8 items-center mb-4">
         <div className="grow flex flex-row space-x-4">
           <h1 className="font-bold">DriftDB</h1>
           <StatusIndicator database={db} />
+
+          {
+            autoRefreshState ? null : <button className="appearance-none text-sm block bg-lime-200 text-lime-700 border rounded leading-tight hover:bg-lime-400 py-0.5 px-3" onClick={refreshState}>Refresh State</button>
+          }
+
+          <div>
+            <label className="text-sm">
+              <input type="checkbox" checked={autoRefreshState} onChange={(e) => setAutoRefreshState(e.target.checked)} />
+              {" "}Auto Refresh State
+            </label>
+          </div>
         </div>
       </div>
 
@@ -110,17 +131,15 @@ function App() {
         <div className="grow flex-1">
           <h2 className="font-bold mb-2">Messages</h2>
           <div className="flex flex-col space-y-4 bg-gray-100 rounded-lg p-4 overflow-y-scroll font-mono">
-
             {messages.map((message, i) => (
               <div key={i} className="text-sm"><Message message={message} /></div>
             ))}
           </div>
         </div>
-
-
       </div>
-    </div>
+    </div >
   );
 }
+
 
 export default App;
