@@ -1,10 +1,17 @@
 # DriftDB
 
-**DriftDB is a real-time database for browser-based applications**. You can think of it as a key-value store that speaks WebSocket, with a few other tricks up its sleeve.
+**DriftDB is a real-time data backend for browser-based applications.** It supports a number of messaging primitives, including:
 
-DriftDB is MIT-licensed Rust code. A client library is provided for JavaScript, as well as a helper library for React applications. We also provide hosted DriftDB instances called <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
+- Publisher / subscriber channels (PubSub)
+- Key/value storage with subscriptions
+- Ordered streams
+
+DriftDB is MIT-licensed Rust code. A client library is provided for JavaScript, as well as ergonomic React bindings.
+
+We also provide hosted DriftDB instances called <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
 
 ## Live Demos
+
 - [Shared State](https://demos.driftdb.com/state)
 - [Counter](https://demos.driftdb.com/counter)
 - [Tic Tac Toe](https://demos.driftdb.com/tictactoe)
@@ -41,7 +48,11 @@ export default function SliderDemo() {
 }
 ```
 
-`DriftDBProvider` looks in the page’s URL for an existing DriftDB room ID. If it finds one, it joins it. If it doesn’t, it creates a new room, and updates the URL to include it. This way, your user can share the URL with a friend, and when they open it, they’ll instantly be sharing state.
+All messages in DriftDB belong to a **room**, and have a **subject**. Rooms and subjects are both represented by strings. Rooms are represented by a unique generated string of characters. Subjects are chosen by he developer and usually have a meaning in the context of the application. In the example above, `slider` is the name of the subject used for synchronziing the state of the range slider input.
+
+The room in the example above depends on whether the user visits the page directly or via a link that includes a room ID. If the user visits the page directly, a new room ID is generated and inserted into the URL. If another user opens the same URL, they will be connected to the same room, and instantly be sharing state. This is not behavior of DriftDB itself, but of the `DriftDBProvider` React component used as a client.
+
+A connection with the server is scoped to a **room**. Messages to multiple subjects (within the same room) are multiplexed over one connection.
 
 For more details on DriftDB-React, see [the React docs](/docs/react).
 
