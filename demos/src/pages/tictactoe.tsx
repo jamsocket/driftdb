@@ -1,6 +1,6 @@
 import { DRIFTDB_URL } from '@/config'
 import Head from 'next/head'
-import { DriftDBProvider, StatusIndicator, useDatabase, useSharedReducer, useUniqueClientId } from '../components/driftdb-react'
+import { DriftDBProvider, RoomQRCode, StatusIndicator, useDatabase, useSharedReducer, useUniqueClientId } from '../components/driftdb-react'
 
 enum Player {
     X = 1,
@@ -171,6 +171,7 @@ export default function Counter() {
                 <DriftDBProvider api={DRIFTDB_URL}>
                     <StatusIndicator />
                     <TicTacToeDemo />
+                    <RoomQRCode />
                 </DriftDBProvider>
             </div>
         </>

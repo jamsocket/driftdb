@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { DbConnection } from "driftdb"
 import { Api, RoomResult } from "driftdb/dist/api"
 import { ConnectionStatus, SequenceValue } from "driftdb/dist/types";
@@ -14,6 +14,40 @@ export function useDatabase(): DbConnection {
         throw new Error("useDatabase must be used within a DriftDBProvider");
     }
     return db;
+}
+
+export function RoomQRCode() {
+    const db = useDatabase();
+    const [pageUrl, setPageUrl] = React.useState<string | null>(null)
+
+    useEffect(() => {
+        const callback = () => {
+            if (typeof window === "undefined") {
+                return
+            }
+
+            const url = new URL(window.location.href)
+            const checkRoom = url.searchParams.get(ROOM_ID_KEY)
+
+            if (!checkRoom) {
+                return
+            }
+
+            setPageUrl(window.location.href)
+
+            return () => {
+                db.statusListener.removeListener(callback)
+            }
+        }
+
+        db.statusListener.addListener(callback)
+    }, [db])
+
+    if (pageUrl) {
+        return <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${pageUrl}`} style={{ padding: 40 }} />
+    } else {
+        return null
+    }
 }
 
 class StateListener<T> {
@@ -74,21 +108,6 @@ export function useSharedState<T>(key: string, initialValue: T): [T, (value: T) 
     if (stateListener.current === null) {
         (stateListener as any).current = new StateListener(setState, db, key)
     }
-
-    // const setStateOptimistic = (value: T) => {
-    //     setState(value);
-    //     db?.send({ type: "push", action: { "type": "replace" }, value, key: [key] });
-    // };
-
-    // React.useEffect(() => {
-    //     const callback = (value: SequenceValue) => {
-    //         setState(value.value as T);
-    //     };
-    //     db?.subscribe([key], callback);
-    //     return () => {
-    //         db?.unsubscribe([key], callback);
-    //     };
-    // }, [db, key]);
 
     return [state, stateListener.current!.setStateOptimistic];
 }

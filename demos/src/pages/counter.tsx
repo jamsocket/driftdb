@@ -1,6 +1,6 @@
 import { DRIFTDB_URL } from '@/config'
 import Head from 'next/head'
-import { DriftDBProvider, StatusIndicator, useDatabase, useSharedReducer } from '../components/driftdb-react'
+import { DriftDBProvider, RoomQRCode, StatusIndicator, useDatabase, useSharedReducer } from '../components/driftdb-react'
 
 type ActionType = 'increment' | 'decrement'
 
@@ -35,6 +35,7 @@ export default function Counter() {
                 <DriftDBProvider api={DRIFTDB_URL}>
                     <StatusIndicator />
                     <CounterDemo />
+                    <RoomQRCode />
                 </DriftDBProvider>
             </div>
         </>
