@@ -17,5 +17,5 @@ For more information, see [driftdb.com](https://driftdb.com).
 - `driftdb/`: core Rust driftdb implementation.
 - `driftdb-server/`: Rust crate of driftdb dev server.
 - `driftdb-worker/`: driftdb implementation on Cloudflare Workers.
-- `driftdb-ui/`: React-based debug UI for driftdb.
 - `js-lib/`: JavaScript client library for driftdb.
+- `web-ui/`: React-based debug UI for driftdb.
