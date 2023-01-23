@@ -93,17 +93,17 @@ function App() {
         <div className="grow flex flex-row space-x-4">
           <h1 className="font-bold">DriftDB</h1>
           <StatusIndicator database={db} />
+        </div>
 
-          {
-            autoRefreshState ? null : <button className="appearance-none text-sm block bg-lime-200 text-lime-700 border rounded leading-tight hover:bg-lime-400 py-0.5 px-3" onClick={refreshState}>Refresh State</button>
-          }
+        {
+          autoRefreshState ? null : <button className="appearance-none text-sm block bg-lime-200 text-lime-700 border rounded leading-tight hover:bg-lime-400 py-0.5 px-3" onClick={refreshState}>Refresh State</button>
+        }
 
-          <div>
-            <label className="text-sm">
-              <input type="checkbox" checked={autoRefreshState} onChange={(e) => setAutoRefreshState(e.target.checked)} />
-              {" "}Auto Refresh State
-            </label>
-          </div>
+        <div>
+          <label className="text-sm">
+            <input type="checkbox" checked={autoRefreshState} onChange={(e) => setAutoRefreshState(e.target.checked)} />
+            {" "}Auto Refresh State
+          </label>
         </div>
       </div>
 
