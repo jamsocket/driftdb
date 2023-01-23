@@ -1,7 +1,7 @@
+import { Action, MessageToDb } from "driftdb/dist/types";
 import { useState } from "react";
-import TextInput from "./TextInput";
 import ActionInput from "./ActionInput";
-import { Action, MessageToDb } from "driftdb";
+import TextInput from "./TextInput";
 
 interface MessageToDbFormProps {
     onSend: (message: MessageToDb) => void;
@@ -10,11 +10,11 @@ interface MessageToDbFormProps {
 export default function MessageToDbForm(props: MessageToDbFormProps): JSX.Element {
     const [key, setKey] = useState("");
     const [message, setMessage] = useState("");
-    const [action, setAction] = useState<Action>({type: "Replace"});
+    const [action, setAction] = useState<Action>({type: "replace"});
 
     const sendMessage = () => {
         props.onSend({
-            type: "Push",
+            type: "push",
             key,
             value: message,
             action,

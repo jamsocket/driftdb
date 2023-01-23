@@ -8,7 +8,7 @@ pub mod subject;
 pub struct SequenceNumber(pub u64);
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum Action {
     Relay,
 
@@ -25,7 +25,7 @@ pub enum Action {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageToDatabase {
     Push {
         /// Key to push to.
@@ -51,7 +51,7 @@ pub struct SequenceValue {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageFromDatabase {
     Push {
         key: Subject,

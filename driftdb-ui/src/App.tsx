@@ -1,8 +1,9 @@
+import { DbConnection } from "driftdb";
+import { MessageFromDb, MessageToDb, SequenceValue } from "driftdb/dist/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { StatusIndicator } from "./db-react";
 import MessageToDbForm from "./components/MessageToServerForm";
-import { MessageFromDb, MessageToDb, SequenceValue, DbConnection } from "driftdb";
 import PrettyJson from "./components/PrettyJson";
+import { StatusIndicator } from "./db-react";
 
 interface MessageProps {
   message: MessageFromDb;
@@ -17,7 +18,6 @@ function Message(props: MessageProps) {
 function App() {
   let [messages, setMessages] = useState<Array<MessageFromDb>>([])
   let [keyState, setKeyState] = useState<Record<string, Array<SequenceValue>>>({})
-  let [autoRefreshState, setAutoRefreshState] = useState(false)
 
   let db = useMemo(() => {
     // Check for URL in query string if it exists.
@@ -29,31 +29,29 @@ function App() {
       socketUrl = "ws://localhost:8080/api/ws"
     }
 
-    if (autoRefreshState) {
-      socketUrl += "?debug=true"
-    }
-
+    socketUrl += "?debug=true"
+    
     const db = new DbConnection()
     db.connect(socketUrl)
 
     db.send({
-      type: "Dump",
+      type: "dump",
       prefix: [],
     })
 
     return db
-  }, [autoRefreshState]);
+  }, []);
 
   useEffect(() => {
     const listener = (message: MessageFromDb) => {
-      if (message.type === "Init") {
+      if (message.type === "init") {
         const keyState: Record<string, Array<SequenceValue>> = {}
         for (let [key, value] of message.data) {
           keyState[JSON.stringify(key)] = value
         }
         setKeyState(keyState)
         setMessages([message])
-      } else if (message.type === "Push" && message.value.seq !== undefined) {
+      } else if (message.type === "push" && message.value.seq !== undefined) {
         const key = JSON.stringify(message.key)
         setKeyState((keyState) => {
           const value = keyState[key] || []
@@ -85,20 +83,6 @@ function App() {
         <div className="grow flex flex-row space-x-4">
           <h1 className="font-bold">DriftDB</h1>
           <StatusIndicator database={db} />
-        </div>
-
-        <button className="appearance-none text-sm block bg-lime-200 text-lime-700 border rounded leading-tight hover:bg-lime-400 py-0.5 px-3" onClick={() => {
-          db.send({
-            type: "Dump",
-            prefix: [],
-          })
-        }}>Refresh State</button>
-
-        <div>
-          <label className="text-sm">
-            <input type="checkbox" checked={autoRefreshState} onChange={(e) => setAutoRefreshState(e.target.checked)} />
-            {" "}Auto Refresh State
-          </label>
         </div>
       </div>
 

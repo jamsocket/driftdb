@@ -1,5 +1,5 @@
+import { Action } from "driftdb/dist/types";
 import { useCallback } from "react";
-import { Action } from "driftdb";
 import IntInput from "./IntInput";
 
 interface ActionInputProps {
@@ -12,9 +12,9 @@ export default function ActionInput(props: ActionInputProps): JSX.Element {
     
     const onChangeActionType = (e: React.ChangeEvent<HTMLSelectElement>) => {
         let action: Action;
-        if (e.target.value === "Compact") {
+        if (e.target.value === "compact") {
             action = {
-                type: "Compact",
+                type: "compact",
                 seq: 0,
             };
         } else {
@@ -26,7 +26,7 @@ export default function ActionInput(props: ActionInputProps): JSX.Element {
 
     const setCompactSeq = useCallback((seq: number) => {
         onChange({
-            type: "Compact",
+            type: "compact",
             seq,
         });
     }, [onChange]);
