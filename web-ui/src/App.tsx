@@ -43,7 +43,7 @@ function App() {
     })
 
     return db
-  }, []);
+  }, [autoRefreshState]);
 
   useEffect(() => {
     const listener = (message: MessageFromDb) => {
