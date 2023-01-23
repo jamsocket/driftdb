@@ -16,31 +16,86 @@ export function useDatabase(): DbConnection {
     return db;
 }
 
+class StateListener<T> {
+    lastUpdateSent: number = 0
+    lastValue: T | null = null
+    debounceTimeout: number | null = null
+
+    constructor(
+        private callback: (value: T) => void,
+        private db: DbConnection,
+        private key: string,
+        private debounceMillis: number = 50
+    ) {
+        this.callback = callback.bind(this)
+        this.setStateOptimistic = this.setStateOptimistic.bind(this)
+        this.sendUpdate = this.sendUpdate.bind(this)
+
+        db.subscribe([key], (value: SequenceValue) => {
+            this.callback(value.value as T)
+        })
+    }
+
+    onMessage(value: SequenceValue) {
+        this.callback(value.value as T)
+    }
+
+    sendUpdate() {
+        this.debounceTimeout = null
+        this.db?.send({
+            type: "push",
+            action: { "type": "replace" },
+            value: this.lastValue,
+            key: [this.key]
+        })
+    }
+
+    setStateOptimistic(value: T) {
+        this.callback(value)
+
+        this.lastValue = value
+        const now = performance.now()
+        if (now - this.lastUpdateSent < this.debounceMillis) {
+            if (this.debounceTimeout === null) {
+                this.debounceTimeout = window.setTimeout(this.sendUpdate, this.debounceMillis)
+            }
+        } else {
+            this.lastUpdateSent = now
+            this.sendUpdate()
+        }
+    }
+}
+
 export function useSharedState<T>(key: string, initialValue: T): [T, (value: T) => void] {
     const db = useDatabase();
     const [state, setState] = React.useState<T>(initialValue);
 
-    const setStateOptimistic = (value: T) => {
-        setState(value);
-        db?.send({ type: "push", action: { "type": "replace" }, value, key: [key] });
-    };
+    let stateListener = useRef<StateListener<T>>(null)
+    if (stateListener.current === null) {
+        (stateListener as any).current = new StateListener(setState, db, key)
+    }
 
-    React.useEffect(() => {
-        const callback = (value: SequenceValue) => {
-            setState(value.value as T);
-        };
-        db?.subscribe([key], callback);
-        return () => {
-            db?.unsubscribe([key], callback);
-        };
-    }, [db, key]);
+    // const setStateOptimistic = (value: T) => {
+    //     setState(value);
+    //     db?.send({ type: "push", action: { "type": "replace" }, value, key: [key] });
+    // };
 
-    return [state, setStateOptimistic];
+    // React.useEffect(() => {
+    //     const callback = (value: SequenceValue) => {
+    //         setState(value.value as T);
+    //     };
+    //     db?.subscribe([key], callback);
+    //     return () => {
+    //         db?.unsubscribe([key], callback);
+    //     };
+    // }, [db, key]);
+
+    return [state, stateListener.current!.setStateOptimistic];
 }
 
 export function useUniqueClientId(): string {
     const currentId = useRef<string>()
-    
+
     if (typeof window === "undefined") {
         return null!
     }
@@ -138,10 +193,10 @@ export function StatusIndicator() {
     }
 
     return (
-        <div style={{display: 'inline-block', border: '1px solid #ccc', background: '#eee', borderRadius: 10, padding: 10}}>
-            DriftDB status: <span style={{color, fontWeight: 'bold'}}>{status.connected ? "Connected" : "Disconnected"}</span>
+        <div style={{ display: 'inline-block', border: '1px solid #ccc', background: '#eee', borderRadius: 10, padding: 10 }}>
+            DriftDB status: <span style={{ color, fontWeight: 'bold' }}>{status.connected ? "Connected" : "Disconnected"}</span>
             {
-                status.connected ? <>{" "}<span><a target="_blank" rel="noreferrer" style={{textDecoration: 'none', color: '#aaa', fontSize: "70%"}} href={status.debugUrl}>(ui)</a></span></> : null
+                status.connected ? <>{" "}<span><a target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#aaa', fontSize: "70%" }} href={status.debugUrl}>(ui)</a></span></> : null
             }
         </div>
     );
