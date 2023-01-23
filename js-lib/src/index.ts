@@ -59,6 +59,7 @@ export class DbConnection {
     sizeSubscriptions = new SubscriptionManager()
     private queue: Array<MessageToDb> = []
     private dbUrl: string | null = null
+    private reconnectLoopHandle: number | null = null
 
     constructor() {}
 
@@ -72,19 +73,31 @@ export class DbConnection {
         this.connection = new WebSocket(dbUrl)
         
         this.connection.onopen = () => {
+            if (this.reconnectLoopHandle) {
+                window.clearInterval(this.reconnectLoopHandle)
+                this.reconnectLoopHandle = null
+            }
+
             this.setStatus(true)
 
             this.queue.forEach(message => {
                 this.send(message)
             })
+
+            this.queue = []
         }
 
-        this.connection.onerror = () => {
+        this.connection.onerror = (err: Event) => {
+            console.error("DriftDB connection error", err)
             this.setStatus(false)
         }
 
         this.connection.onclose = () => {
             this.setStatus(false)
+
+            this.reconnectLoopHandle = window.setInterval(() => {
+                this.connect(dbUrl)
+            }, 100)
         }
 
         this.connection.onmessage = (event) => {
