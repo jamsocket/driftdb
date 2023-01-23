@@ -1,6 +1,6 @@
 import { DbConnection } from "driftdb";
 import { MessageFromDb, MessageToDb, SequenceValue } from "driftdb/dist/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MessageToDbForm from "./components/MessageToServerForm";
 import PrettyJson from "./components/PrettyJson";
 import { StatusIndicator } from "./db-react";
@@ -15,12 +15,22 @@ function Message(props: MessageProps) {
   );
 }
 
+function useDb(): DbConnection {
+  let db = useRef<DbConnection>()
+  if (!db.current) {
+    db.current = new DbConnection()
+  }
+  return db.current
+}
+
 function App() {
   let [messages, setMessages] = useState<Array<MessageFromDb>>([])
   let [keyState, setKeyState] = useState<Record<string, Array<SequenceValue>>>({})
   let [autoRefreshState, setAutoRefreshState] = useState(true)
 
-  let db = useMemo(() => {
+  let db = useDb()
+
+  useEffect(() => {
     // Check for URL in query string if it exists.
     let url = new URL(window.location.href)
     let socketUrl
@@ -29,21 +39,17 @@ function App() {
     } else {
       socketUrl = "ws://localhost:8080/api/ws"
     }
-
     if (autoRefreshState) {
       socketUrl += "?debug=true"
     }
 
-    const db = new DbConnection()
     db.connect(socketUrl)
 
     db.send({
       type: "dump",
       prefix: [],
     })
-
-    return db
-  }, [autoRefreshState]);
+  }, [autoRefreshState])
 
   useEffect(() => {
     const listener = (message: MessageFromDb) => {

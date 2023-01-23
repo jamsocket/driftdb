@@ -64,6 +64,11 @@ export class DbConnection {
 
     connect(dbUrl: string) {
         this.dbUrl = dbUrl
+        
+        if (this.connection) {
+            this.connection.close()
+        }
+
         this.connection = new WebSocket(dbUrl)
         
         this.connection.onopen = () => {
