@@ -11,7 +11,7 @@
   },
   "author": "Paul Butler <paul@driftingin.space>",
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
     "typescript": "^4.9.4"
   }
 }
