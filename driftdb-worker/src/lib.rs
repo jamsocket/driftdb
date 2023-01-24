@@ -83,10 +83,14 @@ pub struct DbRoom {
 }
 
 /// A raw WebSocket is not Send or Sync, but that doesn't matter because we are compiling
-/// to WebAssembly, which is single-threaded.
+/// to WebAssembly, which is single-threaded, so we wrap it in a newtype struct which
+/// implements Send and Sync.
 struct WrappedWebSocket(WebSocket);
 unsafe impl Send for WrappedWebSocket {}
 unsafe impl Sync for WrappedWebSocket {}
+
+#[cfg(all(not(target_os = "wasm32"), not(debug_assertions)))]
+compile_error!("driftdb-worker should only be compiled to WebAssembly. Use driftdb-server for other targets.");
 
 #[durable_object]
 impl DurableObject for DbRoom {
@@ -128,7 +132,7 @@ impl DurableObject for DbRoom {
 
                 if debug {
                     db.connect_debug(callback)
-                } else {
+                } else {                    
                     db.connect(callback)
                 }
             };
