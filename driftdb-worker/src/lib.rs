@@ -48,7 +48,7 @@ pub fn handle_new_room(req: Request, _: RouteContext<()>) -> Result<Response> {
     room_result(req, &room_id)
 }
 
-pub async fn handle_connect(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub async fn handle_room_request(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(id) = ctx.param("room_id") {
         let namespace = ctx.durable_object("DATABASE")?;
         let stub = namespace.id_from_name(id)?.get_stub()?;
@@ -68,7 +68,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         .get("/", |_, _| Response::ok("DriftDB Worker service."))
         .post("/new", handle_new_room)
         .get("/room/:room_id", handle_room)
-        .get_async("/room/:room_id/connect", handle_connect)
+        .on_async("/room/:room_id/:handler", handle_room_request)
         .run(req, env)
         .await?;
 
@@ -89,19 +89,13 @@ struct WrappedWebSocket(WebSocket);
 unsafe impl Send for WrappedWebSocket {}
 unsafe impl Sync for WrappedWebSocket {}
 
-#[cfg(all(not(target_os = "wasm32"), not(debug_assertions)))]
-compile_error!("driftdb-worker should only be compiled to WebAssembly. Use driftdb-server for other targets.");
+#[cfg(all(not(target_arch = "wasm32"), not(debug_assertions)))]
+compile_error!(
+    "driftdb-worker should only be compiled to WebAssembly. Use driftdb-server for other targets."
+);
 
-#[durable_object]
-impl DurableObject for DbRoom {
-    fn new(state: State, _: Env) -> Self {
-        Self {
-            state,
-            db: Database::new(),
-        }
-    }
-
-    async fn fetch(&mut self, req: Request) -> Result<Response> {
+impl DbRoom {
+    async fn connect(&mut self, req: Request) -> Result<Response> {
         let WebSocketPair { client, server } = WebSocketPair::new()?;
         server.accept()?;
 
@@ -132,7 +126,7 @@ impl DurableObject for DbRoom {
 
                 if debug {
                     db.connect_debug(callback)
-                } else {                    
+                } else {
                     db.connect(callback)
                 }
             };
@@ -163,5 +157,30 @@ impl DurableObject for DbRoom {
         });
 
         Response::from_websocket(client)?.with_cors(&cors())
+    }
+}
+
+#[durable_object]
+impl DurableObject for DbRoom {
+    fn new(state: State, _: Env) -> Self {
+        Self {
+            state,
+            db: Database::new(),
+        }
+    }
+
+    async fn fetch(&mut self, mut req: Request) -> Result<Response> {
+        let url = req.url()?;
+        let (_, path) = url.path().rsplit_once('/').unwrap_or_default();
+        let method = req.method();
+        match (method, path) {
+            (Method::Get, "connect") => self.connect(req).await,
+            (Method::Post, "send") => {
+                let message: MessageToDatabase = req.json().await?;
+                let response = self.db.send_message(&message, Utc::now());
+                Response::from_json(&response)
+            }
+            _ => Response::error("Room command not found", 404),
+        }
     }
 }

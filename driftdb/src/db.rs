@@ -12,6 +12,86 @@ pub struct DatabaseInner {
     store: Store,
 }
 
+impl DatabaseInner {
+    pub fn send_message(
+        &mut self,
+        message: &MessageToDatabase,
+        _timestamp: DateTime<Utc>,
+    ) -> Option<MessageFromDatabase> {
+        match message {
+            MessageToDatabase::Push { key, value, action } => {
+                let result = self.store.apply(key, value.clone(), action);
+
+                if !self.debug_connections.is_empty() {
+                    if result.mutates() {
+                        let data = self.store.dump();
+
+                        let message = MessageFromDatabase::Init {
+                            data,
+                            prefix: Subject::default(),
+                        };
+
+                        self.debug_connections.retain(|conn| {
+                            if let Some(conn) = conn.upgrade() {
+                                (conn.callback)(&message);
+                                true
+                            } else {
+                                false
+                            }
+                        });
+                    } else if let Some(seq_value) = &result.broadcast {
+                        let message = MessageFromDatabase::Push {
+                            key: key.clone(),
+                            value: seq_value.clone(),
+                        };
+                        self.debug_connections.retain(|conn| {
+                            if let Some(conn) = conn.upgrade() {
+                                (conn.callback)(&message);
+                                true
+                            } else {
+                                false
+                            }
+                        });
+                    }
+                }
+
+                if let Some(seq_value) = result.broadcast {
+                    let message = MessageFromDatabase::Push {
+                        key: key.clone(),
+                        value: seq_value,
+                    };
+                    self.connections.retain(|conn| {
+                        if let Some(conn) = conn.upgrade() {
+                            (conn.callback)(&message);
+                            true
+                        } else {
+                            false
+                        }
+                    });
+                }
+
+                if result.subject_size > 1 {
+                    let message = MessageFromDatabase::SubjectSize {
+                        key: key.clone(),
+                        size: result.subject_size,
+                    };
+                    return Some(message);
+                }
+            }
+            MessageToDatabase::Dump { prefix } => {
+                let data = self.store.dump();
+
+                return Some(MessageFromDatabase::Init {
+                    data,
+                    prefix: prefix.clone(),
+                });
+            }
+        }
+
+        None
+    }
+}
+
 #[derive(Default, Clone)]
 pub struct Database {
     inner: Arc<Mutex<DatabaseInner>>,
@@ -20,6 +100,15 @@ pub struct Database {
 impl Database {
     pub fn new() -> Database {
         Self::default()
+    }
+
+    pub fn send_message(
+        &self,
+        message: &MessageToDatabase,
+        _timestamp: DateTime<Utc>,
+    ) -> Option<MessageFromDatabase> {
+        let mut db = self.inner.lock().unwrap();
+        db.send_message(message, _timestamp)
     }
 
     pub fn connect<F>(&self, callback: F) -> Arc<Connection>
@@ -70,78 +159,9 @@ impl Connection {
         message: &MessageToDatabase,
         _timestamp: DateTime<Utc>,
     ) -> Result<(), &str> {
-        let tmp_rc = self.database.upgrade().unwrap();
-        let mut db = tmp_rc.lock().unwrap();
-
-        match message {
-            MessageToDatabase::Push { key, value, action } => {
-                let result = db.store.apply(key, value.clone(), action);
-
-                if !db.debug_connections.is_empty() {
-                    if result.mutates() {
-                        let data = db.store.dump();
-
-                        let message = MessageFromDatabase::Init {
-                            data,
-                            prefix: Subject::default(),
-                        };
-
-                        db.debug_connections.retain(|conn| {
-                            if let Some(conn) = conn.upgrade() {
-                                (conn.callback)(&message);
-                                true
-                            } else {
-                                false
-                            }
-                        });
-                    } else if let Some(seq_value) = &result.broadcast {
-                        let message = MessageFromDatabase::Push {
-                            key: key.clone(),
-                            value: seq_value.clone(),
-                        };
-                        db.debug_connections.retain(|conn| {
-                            if let Some(conn) = conn.upgrade() {
-                                (conn.callback)(&message);
-                                true
-                            } else {
-                                false
-                            }
-                        });
-                    }
-                }
-
-                if let Some(seq_value) = result.broadcast {
-                    let message = MessageFromDatabase::Push {
-                        key: key.clone(),
-                        value: seq_value,
-                    };
-                    db.connections.retain(|conn| {
-                        if let Some(conn) = conn.upgrade() {
-                            (conn.callback)(&message);
-                            true
-                        } else {
-                            false
-                        }
-                    });
-                }
-
-                if result.subject_size > 1 {
-                    let message = MessageFromDatabase::SubjectSize {
-                        key: key.clone(),
-                        size: result.subject_size,
-                    };
-                    (self.callback)(&message);
-                }
-            }
-            MessageToDatabase::Dump { prefix } => {
-                let data = db.store.dump();
-
-                (self.callback)(&MessageFromDatabase::Init {
-                    data,
-                    prefix: prefix.clone(),
-                });
-            }
-        }
+        if let Some(response) = self.database.upgrade().unwrap().lock().unwrap().send_message(message, _timestamp) {
+            (self.callback)(&response);
+        };
 
         Ok(())
     }
