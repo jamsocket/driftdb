@@ -44,10 +44,10 @@ export default function ActionInput(props: ActionInputProps): JSX.Element {
                 Action
             </label>
             <select className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white" id="grid-state" value={dropDownValue} onChange={onChangeActionType}>
-                <option value="Relay">Relay</option>
-                <option value="Append">Append</option>
-                <option value="Replace">Replace</option>
-                <option value="Compact">Compact</option>
+                <option value="relay">Relay</option>
+                <option value="append">Append</option>
+                <option value="replace">Replace</option>
+                <option value="compact">Compact</option>
             </select>
         </div>
         {
