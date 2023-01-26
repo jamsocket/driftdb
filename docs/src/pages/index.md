@@ -1,6 +1,6 @@
 # DriftDB
 
-**DriftDB is a real-time data backend for browser-based applications.** It supports a number of messaging primitives, including:
+**DriftDB is a real-time data backend that runs on the edge.** It supports a number of messaging primitives, including:
 
 - Publisher / subscriber channels (PubSub)
 - Key/value storage with subscriptions
