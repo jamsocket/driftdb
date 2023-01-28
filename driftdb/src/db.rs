@@ -20,9 +20,9 @@ impl DatabaseInner {
 
                 if !self.debug_connections.is_empty() {
                     if result.mutates() {
-                        let data = self.store.dump(SequenceNumber::default());
+                        let data = self.store.dump(key, SequenceNumber::default());
 
-                        let message = MessageFromDatabase::Init { data };
+                        let message = MessageFromDatabase::Init { data, key: key.clone() };
 
                         self.debug_connections.retain(|conn| {
                             if let Some(conn) = conn.upgrade() {
@@ -71,10 +71,13 @@ impl DatabaseInner {
                     return Some(message);
                 }
             }
-            MessageToDatabase::Dump { seq } => {
-                let data = self.store.dump(*seq);
+            MessageToDatabase::Get { seq, key } => {
+                let data = self.store.dump(key, *seq);
 
-                return Some(MessageFromDatabase::Init { data });
+                return Some(MessageFromDatabase::Init {
+                    data,
+                    key: key.clone(),
+                });
             }
         }
 
@@ -133,9 +136,10 @@ mod tests {
     };
     use serde_json::{json, Value};
 
-    fn subscribe(conn: &Connection) {
-        conn.send_message(&MessageToDatabase::Dump {
+    fn subscribe(conn: &Connection, key: &str) {
+        conn.send_message(&MessageToDatabase::Get {
             seq: SequenceNumber::default(),
+            key: key.into(),
         })
         .unwrap();
     }
@@ -156,10 +160,13 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn);
+        subscribe(&conn, "foo");
 
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash.next()
         );
     }
@@ -172,10 +179,13 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn);
+        subscribe(&conn, "foo");
 
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash.next()
         );
 
@@ -213,17 +223,23 @@ mod tests {
 
         let (stash1, callback1) = MessageStash::new();
         let conn1 = db.connect(callback1);
-        subscribe(&conn1);
+        subscribe(&conn1, "foo");
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash1.next()
         );
 
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
-        subscribe(&conn2);
+        subscribe(&conn2, "foo");
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash2.next()
         );
 
@@ -259,10 +275,13 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn);
+        subscribe(&conn, "foo");
 
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash.next()
         );
 
@@ -283,17 +302,15 @@ mod tests {
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
 
-        subscribe(&conn2);
+        subscribe(&conn2, "foo");
 
         assert_eq!(
             Some(MessageFromDatabase::Init {
-                data: vec![(
-                    "foo".into(),
-                    vec![SequenceValue {
-                        value: json!({ "bar": "baz" }),
-                        seq: SequenceNumber(1),
-                    }]
-                )],
+                data: vec![SequenceValue {
+                    value: json!({ "bar": "baz" }),
+                    seq: SequenceNumber(1),
+                }],
+                key: "foo".into()
             }),
             stash2.next()
         );
@@ -305,9 +322,12 @@ mod tests {
 
         let (stash1, callback1) = MessageStash::new();
         let conn1 = db.connect(callback1);
-        subscribe(&conn1);
+        subscribe(&conn1, "foo");
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash1.next()
         );
 
@@ -337,10 +357,13 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn);
+        subscribe(&conn, "foo");
 
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash.next()
         );
 
@@ -401,27 +424,25 @@ mod tests {
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
 
-        subscribe(&conn2);
+        subscribe(&conn2, "foo");
 
         assert_eq!(
             Some(MessageFromDatabase::Init {
-                data: vec![(
-                    "foo".into(),
-                    vec![
-                        SequenceValue {
-                            value: json!({ "bar": "baz" }),
-                            seq: SequenceNumber(1),
-                        },
-                        SequenceValue {
-                            value: json!({ "abc": "def" }),
-                            seq: SequenceNumber(2),
-                        },
-                        SequenceValue {
-                            value: json!({ "boo": "baa" }),
-                            seq: SequenceNumber(3),
-                        }
-                    ]
-                )],
+                key: "foo".into(),
+                data: vec![
+                    SequenceValue {
+                        value: json!({ "bar": "baz" }),
+                        seq: SequenceNumber(1),
+                    },
+                    SequenceValue {
+                        value: json!({ "abc": "def" }),
+                        seq: SequenceNumber(2),
+                    },
+                    SequenceValue {
+                        value: json!({ "boo": "baa" }),
+                        seq: SequenceNumber(3),
+                    }
+                ]
             }),
             stash2.next()
         );
@@ -434,10 +455,13 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn);
+        subscribe(&conn, "foo");
 
         assert_eq!(
-            Some(MessageFromDatabase::Init { data: vec![] }),
+            Some(MessageFromDatabase::Init {
+                data: vec![],
+                key: "foo".into()
+            }),
             stash.next()
         );
 
@@ -457,23 +481,21 @@ mod tests {
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
 
-        subscribe(&conn2);
+        subscribe(&conn2, "foo");
 
         assert_eq!(
             Some(MessageFromDatabase::Init {
-                data: vec![(
-                    "foo".into(),
-                    vec![
-                        SequenceValue {
-                            value: json!({ "moo": "ram" }),
-                            seq: SequenceNumber(2),
-                        },
-                        SequenceValue {
-                            value: json!({ "boo": "baa" }),
-                            seq: SequenceNumber(3),
-                        }
-                    ]
-                )],
+                key: "foo".into(),
+                data: vec![
+                    SequenceValue {
+                        value: json!({ "moo": "ram" }),
+                        seq: SequenceNumber(2),
+                    },
+                    SequenceValue {
+                        value: json!({ "boo": "baa" }),
+                        seq: SequenceNumber(3),
+                    }
+                ]
             }),
             stash2.next()
         );

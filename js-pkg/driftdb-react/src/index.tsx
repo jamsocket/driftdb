@@ -65,7 +65,7 @@ class StateListener<T> {
         this.setStateOptimistic = this.setStateOptimistic.bind(this)
         this.sendUpdate = this.sendUpdate.bind(this)
 
-        db.subscribe([key], (value: SequenceValue) => {
+        db.subscribe(key, (value: SequenceValue) => {
             this.callback(value.value as T)
         })
     }
@@ -80,7 +80,7 @@ class StateListener<T> {
             type: "push",
             action: { "type": "replace" },
             value: this.lastValue,
-            key: [this.key]
+            key: this.key
         })
     }
 
@@ -139,7 +139,7 @@ export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: 
     const dispatch = (action: any) => {
         const value = reducer(state, action);
         setState(value);
-        db?.send({ type: "push", action: { "type": "append" }, value: { "apply": action }, key: [key] });
+        db?.send({ type: "push", action: { "type": "append" }, value: { "apply": action }, key });
     };
 
     React.useEffect(() => {
@@ -170,14 +170,14 @@ export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: 
                     type: "push",
                     action: { "type": "compact", seq: lastConfirmedSeq.current },
                     value: { "reset": lastConfirmedState.current },
-                    key: [key]
+                    key
                 });
             }
         }
 
-        db?.subscribe([key], callback, sizeCallback);
+        db?.subscribe(key, callback, sizeCallback);
         return () => {
-            db?.unsubscribe([key], callback);
+            db?.unsubscribe(key, callback);
         };
     }, [db, key, reducer, sizeThreshold]);
 
@@ -253,7 +253,7 @@ export function DriftDBProvider(props: DriftDBProviderProps) {
             url.searchParams.set(ROOM_ID_KEY, result.room);
             window.history.replaceState({}, "", url.toString());
 
-            dbRef.current?.connect(result.url);
+            dbRef.current?.connect(result.socket_url);
         });
 
         return () => {

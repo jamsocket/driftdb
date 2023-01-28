@@ -1,4 +1,4 @@
-export type Key = Array<string>
+export type Key = string
 export type SequenceNumber = number
 
 export type Action = {type: 'append' | 'replace' | 'relay'} | {type: 'compact', seq: SequenceNumber}
@@ -14,8 +14,8 @@ export type MessageFromDb = {
     value: SequenceValue,
 } | {
     type: 'init',
-    prefix: Key,
-    data: Array<[Key, Array<SequenceValue>]>
+    data: Array<SequenceValue>,
+    key: Key,
 } | {
     type: 'error',
     message: string
@@ -31,8 +31,9 @@ export type MessageToDb = {
     value: any
     key: Key
 } | {
-    type: 'dump'
-    prefix: Key
+    type: 'get'
+    key: Key
+    seq: SequenceNumber
 }
 
 export type ConnectionStatus = {
