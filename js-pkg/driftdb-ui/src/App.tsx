@@ -1,6 +1,6 @@
 import { DbConnection } from "driftdb";
 import { MessageFromDb, MessageToDb, SequenceValue } from "driftdb/dist/types";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import MessageToDbForm from "./components/MessageToServerForm";
 import PrettyJson from "./components/PrettyJson";
 import { StatusIndicator } from "./db-react";
