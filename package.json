@@ -1,0 +1,6 @@
+{
+  "name": "driftdb-workspace",
+  "workspaces": [
+    "js-pkg/*"
+  ]
+}

@@ -44,7 +44,9 @@ pub enum MessageToDatabase {
         /// Describes the action that this should have on the state.
         action: Action,
     },
-    Dump {
+    Get {
+        /// Key to get.
+        key: Key,
         /// Sequence number to start from.
         seq: SequenceNumber,
     },
@@ -64,7 +66,8 @@ pub enum MessageFromDatabase {
         value: SequenceValue,
     },
     Init {
-        data: Vec<(Key, Vec<SequenceValue>)>,
+        key: Key,
+        data: Vec<SequenceValue>,
     },
     Error {
         message: String,

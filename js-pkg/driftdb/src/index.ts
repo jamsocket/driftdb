@@ -61,8 +61,6 @@ export class DbConnection {
     private dbUrl: string | null = null
     private reconnectLoopHandle: number | null = null
 
-    constructor() {}
-
     connect(dbUrl: string) {
         this.dbUrl = dbUrl
         
@@ -108,10 +106,8 @@ export class DbConnection {
 
             switch (message.type) {
                 case 'init':
-                    message.data.forEach(([key, values]) => {
-                        values.forEach(value => {
-                            this.subscriptions.dispatch(key, value)
-                        })
+                    message.data.forEach((value) => {
+                        this.subscriptions.dispatch(message.key, value)
                     })
                     break
                 case 'push':
@@ -150,12 +146,12 @@ export class DbConnection {
         this.connection!.send(JSON.stringify(message))
     }
 
-    subscribe(subject: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
-        this.subscriptions.subscribe(subject, listener)
+    subscribe(key: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
+        this.subscriptions.subscribe(key, listener)
         if (sizeCallback) {
-            this.sizeSubscriptions.subscribe(subject, sizeCallback)
+            this.sizeSubscriptions.subscribe(key, sizeCallback)
         }
-        this.send({type: 'dump', prefix: subject})
+        this.send({type: 'get', key, seq: 0 })
     }
 
     unsubscribe(subject: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {

@@ -44,11 +44,6 @@ function App() {
     }
 
     db.connect(socketUrl)
-
-    db.send({
-      type: "dump",
-      prefix: [],
-    })
   }, [autoRefreshState])
 
   useEffect(() => {
@@ -86,13 +81,6 @@ function App() {
     db.send(message);
   }, [db])
 
-  const refreshState = useCallback(() => {
-    db.send({
-      type: "dump",
-      prefix: [],
-    })
-  }, [])
-
   return (
     <div className="container mx-auto flex flex-col space-y-2 py-6">
       <div className="flex flex-row space-x-8 items-center mb-4">
@@ -100,10 +88,6 @@ function App() {
           <h1 className="font-bold">DriftDB</h1>
           <StatusIndicator database={db} />
         </div>
-
-        {
-          autoRefreshState ? null : <button className="appearance-none text-sm block bg-lime-200 text-lime-700 border rounded leading-tight hover:bg-lime-400 py-0.5 px-3" onClick={refreshState}>Refresh State</button>
-        }
 
         <div>
           <label className="text-sm">
@@ -146,6 +130,5 @@ function App() {
     </div >
   );
 }
-
 
 export default App;
