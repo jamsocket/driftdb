@@ -1,8 +1,8 @@
 use crate::{
+    connection::Connection,
     store::Store,
-    types::{subject::Subject, MessageFromDatabase, MessageToDatabase},
+    types::{MessageFromDatabase, MessageToDatabase, SequenceNumber},
 };
-use chrono::{DateTime, Utc};
 use std::sync::{Arc, Mutex, Weak};
 
 #[derive(Default)]
@@ -13,23 +13,16 @@ pub struct DatabaseInner {
 }
 
 impl DatabaseInner {
-    pub fn send_message(
-        &mut self,
-        message: &MessageToDatabase,
-        _timestamp: DateTime<Utc>,
-    ) -> Option<MessageFromDatabase> {
+    pub fn send_message(&mut self, message: &MessageToDatabase) -> Option<MessageFromDatabase> {
         match message {
             MessageToDatabase::Push { key, value, action } => {
                 let result = self.store.apply(key, value.clone(), action);
 
                 if !self.debug_connections.is_empty() {
                     if result.mutates() {
-                        let data = self.store.dump();
+                        let data = self.store.dump(SequenceNumber::default());
 
-                        let message = MessageFromDatabase::Init {
-                            data,
-                            prefix: Subject::default(),
-                        };
+                        let message = MessageFromDatabase::Init { data };
 
                         self.debug_connections.retain(|conn| {
                             if let Some(conn) = conn.upgrade() {
@@ -71,20 +64,17 @@ impl DatabaseInner {
                 }
 
                 if result.subject_size > 1 {
-                    let message = MessageFromDatabase::SubjectSize {
+                    let message = MessageFromDatabase::StreamSize {
                         key: key.clone(),
                         size: result.subject_size,
                     };
                     return Some(message);
                 }
             }
-            MessageToDatabase::Dump { prefix } => {
-                let data = self.store.dump();
+            MessageToDatabase::Dump { seq } => {
+                let data = self.store.dump(*seq);
 
-                return Some(MessageFromDatabase::Init {
-                    data,
-                    prefix: prefix.clone(),
-                });
+                return Some(MessageFromDatabase::Init { data });
             }
         }
 
@@ -102,13 +92,9 @@ impl Database {
         Self::default()
     }
 
-    pub fn send_message(
-        &self,
-        message: &MessageToDatabase,
-        _timestamp: DateTime<Utc>,
-    ) -> Option<MessageFromDatabase> {
+    pub fn send_message(&self, message: &MessageToDatabase) -> Option<MessageFromDatabase> {
         let mut db = self.inner.lock().unwrap();
-        db.send_message(message, _timestamp)
+        db.send_message(message)
     }
 
     pub fn connect<F>(&self, callback: F) -> Arc<Connection>
@@ -138,63 +124,28 @@ impl Database {
     }
 }
 
-pub struct Connection {
-    callback: Arc<Box<dyn Fn(&MessageFromDatabase) + Send + Sync>>,
-    database: Weak<Mutex<DatabaseInner>>,
-}
-
-impl Connection {
-    pub fn new<F>(callback: F, database: Arc<Mutex<DatabaseInner>>) -> Connection
-    where
-        F: Fn(&MessageFromDatabase) + 'static + Send + Sync,
-    {
-        Connection {
-            callback: Arc::new(Box::new(callback)),
-            database: Arc::downgrade(&database),
-        }
-    }
-
-    pub fn send_message(
-        &self,
-        message: &MessageToDatabase,
-        _timestamp: DateTime<Utc>,
-    ) -> Result<(), &str> {
-        if let Some(response) = self.database.upgrade().unwrap().lock().unwrap().send_message(message, _timestamp) {
-            (self.callback)(&response);
-        };
-
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        tests::{subject, timestamp, MessageStash},
+        tests::MessageStash,
         types::{Action, SequenceNumber, SequenceValue},
     };
     use serde_json::{json, Value};
 
-    fn subscribe(conn: &Connection, key: &str) {
-        conn.send_message(
-            &MessageToDatabase::Dump {
-                prefix: subject(key),
-            },
-            timestamp(0),
-        )
+    fn subscribe(conn: &Connection) {
+        conn.send_message(&MessageToDatabase::Dump {
+            seq: SequenceNumber::default(),
+        })
         .unwrap();
     }
 
-    fn push(conn: &Connection, key: &str, value: Value, action: Action, ts: i64) {
-        conn.send_message(
-            &MessageToDatabase::Push {
-                key: subject(key),
-                value,
-                action,
-            },
-            timestamp(ts),
-        )
+    fn push(conn: &Connection, key: &str, value: Value, action: Action) {
+        conn.send_message(&MessageToDatabase::Push {
+            key: key.into(),
+            value,
+            action,
+        })
         .unwrap();
     }
 
@@ -205,13 +156,10 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn, "foo");
+        subscribe(&conn);
 
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash.next()
         );
     }
@@ -224,38 +172,35 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn, "foo");
+        subscribe(&conn);
 
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash.next()
         );
 
-        push(&conn, "foo", json!({ "bar": "baz" }), Action::Relay, 100);
+        push(&conn, "foo", json!({ "bar": "baz" }), Action::Relay);
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "bar": "baz" }),
-                    seq: None,
+                    seq: SequenceNumber(1),
                 }
             }),
             stash.next()
         );
 
-        push(&conn, "foo", json!({ "abc": "def" }), Action::Relay, 200);
+        push(&conn, "foo", json!({ "abc": "def" }), Action::Relay);
 
         // Relay messages do not increase sequence number.
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "abc": "def" }),
-                    seq: None,
+                    seq: SequenceNumber(2),
                 }
             }),
             stash.next()
@@ -268,34 +213,28 @@ mod tests {
 
         let (stash1, callback1) = MessageStash::new();
         let conn1 = db.connect(callback1);
-        subscribe(&conn1, "foo");
+        subscribe(&conn1);
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash1.next()
         );
 
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
-        subscribe(&conn2, "foo");
+        subscribe(&conn2);
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash2.next()
         );
 
-        push(&conn1, "foo", json!({ "bar": "baz" }), Action::Relay, 100);
+        push(&conn1, "foo", json!({ "bar": "baz" }), Action::Relay);
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "bar": "baz" }),
-                    seq: None,
+                    seq: SequenceNumber(1),
                 }
             }),
             stash1.next()
@@ -303,10 +242,10 @@ mod tests {
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "bar": "baz" }),
-                    seq: None,
+                    seq: SequenceNumber(1),
                 }
             }),
             stash2.next()
@@ -320,24 +259,21 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn, "foo");
+        subscribe(&conn);
 
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash.next()
         );
 
-        push(&conn, "foo", json!({ "bar": "baz" }), Action::Replace, 100);
+        push(&conn, "foo", json!({ "bar": "baz" }), Action::Replace);
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "bar": "baz" }),
-                    seq: Some(SequenceNumber(1)),
+                    seq: SequenceNumber(1),
                 }
             }),
             stash.next()
@@ -347,18 +283,17 @@ mod tests {
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
 
-        subscribe(&conn2, "foo");
+        subscribe(&conn2);
 
         assert_eq!(
             Some(MessageFromDatabase::Init {
                 data: vec![(
-                    subject("foo"),
+                    "foo".into(),
                     vec![SequenceValue {
                         value: json!({ "bar": "baz" }),
-                        seq: Some(SequenceNumber(1)),
+                        seq: SequenceNumber(1),
                     }]
                 )],
-                prefix: subject("foo"),
             }),
             stash2.next()
         );
@@ -370,25 +305,22 @@ mod tests {
 
         let (stash1, callback1) = MessageStash::new();
         let conn1 = db.connect(callback1);
-        subscribe(&conn1, "foo");
+        subscribe(&conn1);
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash1.next()
         );
 
         let (stash2, _) = MessageStash::new();
 
-        push(&conn1, "foo", json!({ "bar": "baz" }), Action::Relay, 100);
+        push(&conn1, "foo", json!({ "bar": "baz" }), Action::Relay);
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "bar": "baz" }),
-                    seq: None,
+                    seq: SequenceNumber(1),
                 }
             }),
             stash1.next()
@@ -405,64 +337,61 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn, "foo");
+        subscribe(&conn);
 
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash.next()
         );
 
-        push(&conn, "foo", json!({ "bar": "baz" }), Action::Append, 100);
+        push(&conn, "foo", json!({ "bar": "baz" }), Action::Append);
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "bar": "baz" }),
-                    seq: Some(SequenceNumber(1)),
+                    seq: SequenceNumber(1),
                 }
             }),
             stash.next()
         );
 
-        push(&conn, "foo", json!({ "abc": "def" }), Action::Append, 200);
+        push(&conn, "foo", json!({ "abc": "def" }), Action::Append);
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "abc": "def" }),
-                    seq: Some(SequenceNumber(2)),
+                    seq: SequenceNumber(2),
                 }
             }),
             stash.next()
         );
         assert_eq!(
-            Some(MessageFromDatabase::SubjectSize {
-                key: subject("foo"),
+            Some(MessageFromDatabase::StreamSize {
+                key: "foo".into(),
                 size: 2,
             }),
             stash.next()
         );
 
-        push(&conn, "foo", json!({ "boo": "baa" }), Action::Append, 300);
+        push(&conn, "foo", json!({ "boo": "baa" }), Action::Append);
 
         assert_eq!(
             Some(MessageFromDatabase::Push {
-                key: subject("foo"),
+                key: "foo".into(),
                 value: SequenceValue {
                     value: json!({ "boo": "baa" }),
-                    seq: Some(SequenceNumber(3)),
+                    seq: SequenceNumber(3),
                 }
             }),
             stash.next()
         );
         assert_eq!(
-            Some(MessageFromDatabase::SubjectSize {
-                key: subject("foo"),
+            Some(MessageFromDatabase::StreamSize {
+                key: "foo".into(),
                 size: 3,
             }),
             stash.next()
@@ -472,28 +401,27 @@ mod tests {
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
 
-        subscribe(&conn2, "foo");
+        subscribe(&conn2);
 
         assert_eq!(
             Some(MessageFromDatabase::Init {
                 data: vec![(
-                    subject("foo"),
+                    "foo".into(),
                     vec![
                         SequenceValue {
                             value: json!({ "bar": "baz" }),
-                            seq: Some(SequenceNumber(1)),
+                            seq: SequenceNumber(1),
                         },
                         SequenceValue {
                             value: json!({ "abc": "def" }),
-                            seq: Some(SequenceNumber(2)),
+                            seq: SequenceNumber(2),
                         },
                         SequenceValue {
                             value: json!({ "boo": "baa" }),
-                            seq: Some(SequenceNumber(3)),
+                            seq: SequenceNumber(3),
                         }
                     ]
                 )],
-                prefix: subject("foo"),
             }),
             stash2.next()
         );
@@ -506,19 +434,16 @@ mod tests {
         let (stash, callback) = MessageStash::new();
         let conn = db.connect(callback);
 
-        subscribe(&conn, "foo");
+        subscribe(&conn);
 
         assert_eq!(
-            Some(MessageFromDatabase::Init {
-                data: vec![],
-                prefix: subject("foo")
-            }),
+            Some(MessageFromDatabase::Init { data: vec![] }),
             stash.next()
         );
 
-        push(&conn, "foo", json!({ "bar": "baz" }), Action::Append, 100);
-        push(&conn, "foo", json!({ "abc": "def" }), Action::Append, 200);
-        push(&conn, "foo", json!({ "boo": "baa" }), Action::Append, 300);
+        push(&conn, "foo", json!({ "bar": "baz" }), Action::Append);
+        push(&conn, "foo", json!({ "abc": "def" }), Action::Append);
+        push(&conn, "foo", json!({ "boo": "baa" }), Action::Append);
         push(
             &conn,
             "foo",
@@ -526,31 +451,29 @@ mod tests {
             Action::Compact {
                 seq: SequenceNumber(2),
             },
-            400,
         );
 
         // The durable message should be sent to new subscriptions.
         let (stash2, callback2) = MessageStash::new();
         let conn2 = db.connect(callback2);
 
-        subscribe(&conn2, "foo");
+        subscribe(&conn2);
 
         assert_eq!(
             Some(MessageFromDatabase::Init {
                 data: vec![(
-                    subject("foo"),
+                    "foo".into(),
                     vec![
                         SequenceValue {
                             value: json!({ "moo": "ram" }),
-                            seq: Some(SequenceNumber(2)),
+                            seq: SequenceNumber(2),
                         },
                         SequenceValue {
                             value: json!({ "boo": "baa" }),
-                            seq: Some(SequenceNumber(3)),
+                            seq: SequenceNumber(3),
                         }
                     ]
                 )],
-                prefix: subject("foo"),
             }),
             stash2.next()
         );

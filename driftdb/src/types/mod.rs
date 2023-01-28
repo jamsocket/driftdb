@@ -1,8 +1,14 @@
-use self::subject::Subject;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod subject;
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Default, Deserialize, Hash)]
+pub struct Key(String);
+
+impl From<&str> for Key {
+    fn from(s: &str) -> Self {
+        Key(s.to_string())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default, PartialOrd, Ord)]
 pub struct SequenceNumber(pub u64);
@@ -10,6 +16,7 @@ pub struct SequenceNumber(pub u64);
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Action {
+    /// Broadcast to relavent clients without altering the stream.
     Relay,
 
     /// Append to the stream.
@@ -29,7 +36,7 @@ pub enum Action {
 pub enum MessageToDatabase {
     Push {
         /// Key to push to.
-        key: Subject,
+        key: Key,
 
         /// Value to push.
         value: Value,
@@ -38,34 +45,32 @@ pub enum MessageToDatabase {
         action: Action,
     },
     Dump {
-        /// Key prefix to subscribe to.
-        prefix: Subject,
+        /// Sequence number to start from.
+        seq: SequenceNumber,
     },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub struct SequenceValue {
     pub value: Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub seq: Option<SequenceNumber>,
+    pub seq: SequenceNumber,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageFromDatabase {
     Push {
-        key: Subject,
+        key: Key,
         value: SequenceValue,
     },
     Init {
-        prefix: Subject,
-        data: Vec<(Subject, Vec<SequenceValue>)>,
+        data: Vec<(Key, Vec<SequenceValue>)>,
     },
     Error {
         message: String,
     },
-    SubjectSize {
-        key: Subject,
+    StreamSize {
+        key: Key,
         size: usize,
-    }
+    },
 }

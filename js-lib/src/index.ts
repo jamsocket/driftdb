@@ -1,4 +1,4 @@
-import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Subject } from "./types"
+import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
 
 export class EventListener<T> {
     listeners: Array<(event: T) => void> = []
@@ -19,7 +19,7 @@ export class EventListener<T> {
 export class SubscriptionManager {
     subscriptions: Map<string, EventListener<any>> = new Map()
 
-    subscribe<T>(subject: Subject, listener: (event: T) => void) {
+    subscribe<T>(subject: Key, listener: (event: T) => void) {
         const key = JSON.stringify(subject)
         if (!this.subscriptions.has(key)) {
             this.subscriptions.set(key, new EventListener())
@@ -29,7 +29,7 @@ export class SubscriptionManager {
         subscription.addListener(listener)
     }
 
-    unsubscribe<T>(subject: Subject, listener: (event: T) => void) {
+    unsubscribe<T>(subject: Key, listener: (event: T) => void) {
         const key = JSON.stringify(subject)
         if (!this.subscriptions.has(key)) {
             return
@@ -39,7 +39,7 @@ export class SubscriptionManager {
         subscription.removeListener(listener)
     }
 
-    dispatch<T>(subject: Subject, event: T) {
+    dispatch<T>(subject: Key, event: T) {
         const key = JSON.stringify(subject)
         if (!this.subscriptions.has(key)) {
             return
@@ -117,7 +117,7 @@ export class DbConnection {
                 case 'push':
                     this.subscriptions.dispatch(message.key, message.value)
                     break
-                case 'subject_size':
+                case 'stream_size':
                     this.sizeSubscriptions.dispatch(message.key, message.size)
                     break
             }
@@ -150,7 +150,7 @@ export class DbConnection {
         this.connection!.send(JSON.stringify(message))
     }
 
-    subscribe(subject: Subject, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
+    subscribe(subject: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
         this.subscriptions.subscribe(subject, listener)
         if (sizeCallback) {
             this.sizeSubscriptions.subscribe(subject, sizeCallback)
@@ -158,7 +158,7 @@ export class DbConnection {
         this.send({type: 'dump', prefix: subject})
     }
 
-    unsubscribe(subject: Subject, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
+    unsubscribe(subject: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
         this.subscriptions.unsubscribe(subject, listener)
         if (sizeCallback) {
             this.sizeSubscriptions.unsubscribe(subject, sizeCallback)

@@ -1,21 +1,8 @@
-use chrono::TimeZone;
-use chrono::{DateTime, Utc};
-use serde_json::json;
+use crate::types::MessageFromDatabase;
 use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
 };
-
-use crate::types::subject::Subject;
-use crate::types::MessageFromDatabase;
-
-pub fn subject(subject: &str) -> Subject {
-    serde_json::from_value(json!(subject)).unwrap()
-}
-
-pub fn timestamp(milis: i64) -> DateTime<Utc> {
-    Utc.timestamp_millis_opt(milis).unwrap()
-}
 
 pub struct MessageStash {
     messages: Arc<Mutex<VecDeque<MessageFromDatabase>>>,

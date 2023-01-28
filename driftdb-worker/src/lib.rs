@@ -1,4 +1,3 @@
-use chrono::Utc;
 use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
@@ -136,7 +135,7 @@ impl DbRoom {
                     WebsocketEvent::Message(msg) => {
                         if let Some(text) = msg.text() {
                             if let Ok(message) = serde_json::from_str::<MessageToDatabase>(&text) {
-                                conn.send_message(&message, Utc::now()).unwrap();
+                                conn.send_message(&message).unwrap();
                             } else {
                                 server
                                     .send_with_str(
@@ -177,7 +176,7 @@ impl DurableObject for DbRoom {
             (Method::Get, "connect") => self.connect(req).await,
             (Method::Post, "send") => {
                 let message: MessageToDatabase = req.json().await?;
-                let response = self.db.send_message(&message, Utc::now());
+                let response = self.db.send_message(&message);
                 Response::from_json(&response)
             }
             _ => Response::error("Room command not found", 404),

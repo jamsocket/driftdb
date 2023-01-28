@@ -1,5 +1,4 @@
-export type LaxSubject = string | Array<string>
-export type Subject = Array<string>
+export type Key = Array<string>
 export type SequenceNumber = number
 
 export type Action = {type: 'append' | 'replace' | 'relay'} | {type: 'compact', seq: SequenceNumber}
@@ -11,18 +10,18 @@ export interface SequenceValue {
 
 export type MessageFromDb = {
     type: 'push',
-    key: Subject,
+    key: Key,
     value: SequenceValue,
 } | {
     type: 'init',
-    prefix: Subject,
-    data: Array<[Subject, Array<SequenceValue>]>
+    prefix: Key,
+    data: Array<[Key, Array<SequenceValue>]>
 } | {
     type: 'error',
     message: string
 } | {
-    type: 'subject_size',
-    key: Subject,
+    type: 'stream_size',
+    key: Key,
     size: number
 }
 
@@ -30,10 +29,10 @@ export type MessageToDb = {
     type: 'push'
     action: Action
     value: any
-    key: LaxSubject
+    key: Key
 } | {
     type: 'dump'
-    prefix: LaxSubject
+    prefix: Key
 }
 
 export type ConnectionStatus = {
