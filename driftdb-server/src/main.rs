@@ -1,3 +1,4 @@
+use crate::server::run_server;
 use clap::Parser;
 use std::net::IpAddr;
 use tracing_subscriber::{
@@ -6,7 +7,6 @@ use tracing_subscriber::{
     layer::SubscriberExt,
     util::SubscriberInitExt,
 };
-use crate::server::run_server;
 
 mod server;
 

@@ -7,7 +7,6 @@ use axum::{
     routing::get,
     Router,
 };
-use chrono::Utc;
 use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
 use hyper::{Method, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -108,7 +107,7 @@ async fn handle_socket(socket: WebSocket, database: Arc<Database>, debug: bool) 
 
                 match msg {
                     Ok(Some(msg)) => {
-                        if let Err(e) = conn.send_message(&msg, Utc::now()) {
+                        if let Err(e) = conn.send_message(&msg) {
                             tracing::error!(?e, "Failed to send message to database.");
 
                             let _ = socket.send(MessageFromDatabase::Error {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { DbConnection } from "driftdb"
 import { Api, RoomResult } from "driftdb/dist/api"
 import { ConnectionStatus, SequenceValue } from "driftdb/dist/types";

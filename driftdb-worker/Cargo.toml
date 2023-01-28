@@ -17,7 +17,6 @@ fetch-event = []
 
 [dependencies]
 cfg-if = "0.1.2"
-chrono = "0.4.23"
 console_error_panic_hook = { version = "0.1.1", optional = true }
 driftdb = {path = "../driftdb", version="0.1.0"}
 getrandom = { version = "0.2.8", features = ["js"] }
