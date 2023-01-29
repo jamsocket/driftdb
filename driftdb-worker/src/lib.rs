@@ -37,7 +37,7 @@ fn room_result(req: Request, room_id: &str, use_https: bool) -> Result<Response>
 
 pub fn handle_room(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(id) = ctx.param("room_id") {
-        room_result(req, id, !use_http(&ctx)?)
+        room_result(req, id, !use_http(&ctx))
     } else {
         Response::error("Bad Request", 400)
     }
@@ -54,7 +54,7 @@ fn random_room_id(length: usize) -> String {
 
 pub fn handle_new_room(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let room_id = random_room_id(24);
-    room_result(req, &room_id, !use_http(&ctx)?)
+    room_result(req, &room_id, !use_http(&ctx))
 }
 
 pub async fn handle_room_request(req: Request, ctx: RouteContext<()>) -> Result<Response> {
