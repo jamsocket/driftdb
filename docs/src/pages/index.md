@@ -73,5 +73,4 @@ If you want to run arbitrary server-side code for persistence or access control,
 ## Learn more
 
 - [Read more about the React interface](/docs/react)
-- [Learn about the underlying data model](/docs/data-model)
 - [Learn the API](/docs/api)
