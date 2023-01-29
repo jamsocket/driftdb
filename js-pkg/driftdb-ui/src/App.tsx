@@ -1,7 +1,6 @@
 import { DbConnection } from "driftdb";
-import { MessageFromDb, MessageToDb, SequenceValue } from "driftdb/dist/types";
-import { useCallback, useEffect, useRef, useState } from "react";
-import MessageToDbForm from "./components/MessageToServerForm";
+import { MessageFromDb, SequenceValue } from "driftdb/dist/types";
+import { useEffect, useRef, useState } from "react";
 import PrettyJson from "./components/PrettyJson";
 import { StatusIndicator } from "./db-react";
 
@@ -49,10 +48,11 @@ function App() {
   useEffect(() => {
     const listener = (message: MessageFromDb) => {
       if (message.type === "init") {
-        const _keyState = structuredClone(keyState)
-        _keyState[message.key] = message.data
-        setKeyState(_keyState)
-        setMessages([message])
+        setKeyState((keyState) => {
+          const _keyState = structuredClone(keyState)
+          _keyState[message.key] = message.data
+          return _keyState
+        })
       } else if (message.type === "push" && message.value.seq !== undefined) {
         const key = message.key
         setKeyState((keyState) => {
@@ -62,10 +62,9 @@ function App() {
             [key]: [...value, message.value]
           }
         })
-        setMessages((messages) => [...messages, message])
-      } else {
-        setMessages((messages) => [...messages, message])
       }
+
+      setMessages((messages) => [...messages.slice(-10), message])
     };
 
     db.messageListener.addListener(listener)
@@ -73,10 +72,6 @@ function App() {
     return () => {
       db.messageListener.removeListener(listener)
     }
-  }, [db, keyState])
-
-  const onSend = useCallback((message: MessageToDb) => {
-    db.send(message);
   }, [db])
 
   return (
@@ -95,14 +90,12 @@ function App() {
         </div>
       </div>
 
-      <MessageToDbForm onSend={onSend} />
-
       <div className="flex flex-row space-x-4">
         <div className="grow flex-1">
           <h2 className="font-bold mb-2">State</h2>
           <div className="flex-col space-y-4">
             {
-              Object.entries(keyState).map(([key, value]) => {
+              Object.entries(keyState).sort().map(([key, value]) => {
                 return <div key={key} className="flex-col space-y-4 bg-gray-100 rounded-lg p-4 overflow-y-scroll font-mono">
                   <div className="text-lg font-bold">{key}</div>
                   {value.map((value, i) => (
@@ -117,9 +110,9 @@ function App() {
         <div className="grow flex-1">
           <h2 className="font-bold mb-2">Messages</h2>
           <div className="flex flex-col space-y-4 bg-gray-100 rounded-lg p-4 overflow-y-scroll font-mono">
-            {messages.map((message, i) => (
+            {(messages.length > 1) ? messages.map((message, i) => (
               <div key={i} className="text-sm"><Message message={message} /></div>
-            ))}
+            )) : <div className="text-sm italic text-gray-500">Messages will appear here.</div>}
           </div>
         </div>
       </div>
