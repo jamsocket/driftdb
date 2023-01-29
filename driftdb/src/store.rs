@@ -57,7 +57,14 @@ impl Store {
         self.sequence_number
     }
 
-    pub fn dump(&self, key: &Key, min_sequence: SequenceNumber) -> Vec<SequenceValue> {
+    pub fn dump(&self) -> HashMap<Key, Vec<SequenceValue>> {
+        self.subjects
+            .iter()
+            .map(|(k, v)| (k.clone(), v.values.iter().cloned().collect()))
+            .collect()
+    }
+
+    pub fn get(&self, key: &Key, min_sequence: SequenceNumber) -> Vec<SequenceValue> {
         let Some(log) = self.subjects
             .get(key) else {
                 return vec![];

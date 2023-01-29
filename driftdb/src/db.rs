@@ -20,7 +20,7 @@ impl DatabaseInner {
 
                 if !self.debug_connections.is_empty() {
                     if result.mutates() {
-                        let data = self.store.dump(key, SequenceNumber::default());
+                        let data = self.store.get(key, SequenceNumber::default());
 
                         let message = MessageFromDatabase::Init {
                             data,
@@ -77,7 +77,7 @@ impl DatabaseInner {
                 }
             }
             MessageToDatabase::Get { seq, key } => {
-                let data = self.store.dump(key, *seq);
+                let data = self.store.get(key, *seq);
 
                 return Some(MessageFromDatabase::Init {
                     data,
@@ -123,11 +123,18 @@ impl Database {
         F: Fn(&MessageFromDatabase) + 'static + Send + Sync,
     {
         let conn = Arc::new(Connection::new(callback, self.inner.clone()));
-        self.inner
-            .lock()
-            .unwrap()
-            .debug_connections
-            .push(Arc::downgrade(&conn));
+
+        let mut db = self.inner.lock().unwrap();
+
+        for (key, values) in db.store.dump() {
+            let message = MessageFromDatabase::Init {
+                data: values,
+                key,
+            };
+            (conn.callback)(&message);
+        }
+
+        db.debug_connections.push(Arc::downgrade(&conn));
         conn
     }
 }

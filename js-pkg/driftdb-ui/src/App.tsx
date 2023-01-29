@@ -44,17 +44,17 @@ function App() {
     }
 
     db.connect(socketUrl)
-  }, [autoRefreshState])
+  }, [autoRefreshState, db])
 
   useEffect(() => {
     const listener = (message: MessageFromDb) => {
       if (message.type === "init") {
         const _keyState = structuredClone(keyState)
         _keyState[message.key] = message.data
-        setKeyState(keyState)
+        setKeyState(_keyState)
         setMessages([message])
       } else if (message.type === "push" && message.value.seq !== undefined) {
-        const key = JSON.stringify(message.key)
+        const key = message.key
         setKeyState((keyState) => {
           const value = keyState[key] || []
           return {
@@ -73,7 +73,7 @@ function App() {
     return () => {
       db.messageListener.removeListener(listener)
     }
-  }, [db])
+  }, [db, keyState])
 
   const onSend = useCallback((message: MessageToDb) => {
     db.send(message);
@@ -103,10 +103,8 @@ function App() {
           <div className="flex-col space-y-4">
             {
               Object.entries(keyState).map(([key, value]) => {
-                const keyStr = JSON.parse(key).join('.') || <em>root</em>
-
                 return <div key={key} className="flex-col space-y-4 bg-gray-100 rounded-lg p-4 overflow-y-scroll font-mono">
-                  <div className="text-lg font-bold">{keyStr}</div>
+                  <div className="text-lg font-bold">{key}</div>
                   {value.map((value, i) => (
                     <div key={i} className="text-sm"><PrettyJson value={value} /></div>
                   ))}
