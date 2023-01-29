@@ -75,7 +75,10 @@ class StateListener<T> {
     }
 
     sendUpdate() {
-        this.debounceTimeout = null
+        if (this.debounceTimeout !== null) {
+            window.clearTimeout(this.debounceTimeout)
+            this.debounceTimeout = null
+        }
         this.db?.send({
             type: "push",
             action: { "type": "replace" },
