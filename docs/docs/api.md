@@ -118,3 +118,9 @@ The server will respond to a `get` message with an `init` message like this:
 The type of the `value` fields (here shown as strings) is determined by your application, and can be any JSON type.
 
 Data will be in increasing order of sequence number, but there may be gaps, since the sequence number in a room is global across all keys and a stream only represents one of those keys.
+
+## Messaging over HTTP
+
+In some situations, you just want to send messages or use DriftDB as a key/value store and do not need the complexity of a long-lived WebSocket connection. DriftDB provides a way to send and receive messages over HTTP.
+
+Messages over HTTP have the same JSON schema as messages over WebSocket. They can be sent in a `POST` request to the `http_url` endpoint returned by `/new`.

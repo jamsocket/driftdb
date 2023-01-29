@@ -8,7 +8,7 @@ sidebar_position: 1
 
 Install `DriftDB-React` using `npm`:
 
-    npm i [TODO]
+    npm i driftdb-react
 
 To get started with DriftDB-React, you will need the URL of a running DriftDB server. Either follow the instructions (TODO) to run a server of your own, or sign up at [Jamsocket.live](https://jamsocket.live) for a free hosted instance.
 

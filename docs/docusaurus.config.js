@@ -67,7 +67,7 @@ const config = {
             type: 'doc',
             docId: 'api',
             position: 'left',
-            label: 'WebSocket API',
+            label: 'API',
           },
           {
             href: 'https://github.com/drifting-in-space/driftdb',
