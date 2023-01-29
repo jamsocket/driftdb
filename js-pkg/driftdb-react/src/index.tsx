@@ -144,19 +144,22 @@ export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: 
 
     React.useEffect(() => {
         const callback = (sequenceValue: SequenceValue) => {
+            console.log('sv', sequenceValue)
             if (sequenceValue.seq <= lastConfirmedSeq.current!) {
                 return;
             }
 
-            if (sequenceValue.value.reset !== undefined) {
-                lastConfirmedState.current = sequenceValue.value.reset as T;
+            const value = sequenceValue.value as any;
+
+            if (value.reset !== undefined) {
+                lastConfirmedState.current = value.reset as T;
                 lastConfirmedSeq.current = sequenceValue.seq;
                 setState(structuredClone(lastConfirmedState.current));
                 return;
             }
 
-            if (sequenceValue.value.apply !== undefined) {
-                lastConfirmedState.current = reducer(lastConfirmedState.current, sequenceValue.value.apply as A);
+            if (value.apply !== undefined) {
+                lastConfirmedState.current = reducer(lastConfirmedState.current, value.apply as A);
                 lastConfirmedSeq.current = sequenceValue.seq;
                 setState(structuredClone(lastConfirmedState.current));
                 return;
@@ -179,7 +182,7 @@ export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: 
         return () => {
             db?.unsubscribe(key, callback);
         };
-    }, [db, key, reducer, sizeThreshold]);
+    }, [key]);
 
     return [state, dispatch];
 }

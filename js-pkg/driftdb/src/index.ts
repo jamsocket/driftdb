@@ -16,10 +16,10 @@ export class EventListener<T> {
     }
 }
 
-export class SubscriptionManager {
-    subscriptions: Map<string, EventListener<any>> = new Map()
+export class SubscriptionManager<T> {
+    subscriptions: Map<string, EventListener<T>> = new Map()
 
-    subscribe<T>(subject: Key, listener: (event: T) => void) {
+    subscribe(subject: Key, listener: (event: T) => void) {
         const key = JSON.stringify(subject)
         if (!this.subscriptions.has(key)) {
             this.subscriptions.set(key, new EventListener())
@@ -29,7 +29,7 @@ export class SubscriptionManager {
         subscription.addListener(listener)
     }
 
-    unsubscribe<T>(subject: Key, listener: (event: T) => void) {
+    unsubscribe(subject: Key, listener: (event: T) => void) {
         const key = JSON.stringify(subject)
         if (!this.subscriptions.has(key)) {
             return
@@ -39,7 +39,7 @@ export class SubscriptionManager {
         subscription.removeListener(listener)
     }
 
-    dispatch<T>(subject: Key, event: T) {
+    dispatch(subject: Key, event: T) {
         const key = JSON.stringify(subject)
         if (!this.subscriptions.has(key)) {
             return
@@ -55,8 +55,8 @@ export class DbConnection {
     status: ConnectionStatus = {connected: false}
     public statusListener = new EventListener<ConnectionStatus>()
     public messageListener = new EventListener<MessageFromDb>()
-    subscriptions = new SubscriptionManager()
-    sizeSubscriptions = new SubscriptionManager()
+    subscriptions = new SubscriptionManager<SequenceValue>()
+    sizeSubscriptions = new SubscriptionManager<number>()
     private queue: Array<MessageToDb> = []
     private dbUrl: string | null = null
     private reconnectLoopHandle: number | null = null
@@ -107,12 +107,14 @@ export class DbConnection {
             switch (message.type) {
                 case 'init':
                     message.data.forEach((value) => {
-                        (value as any).key = message.key
                         this.subscriptions.dispatch(message.key, value)
                     })
                     break
                 case 'push':
-                    this.subscriptions.dispatch(message.key, message)
+                    this.subscriptions.dispatch(message.key, {
+                        seq: message.seq,
+                        value: message.value,
+                    })
                     break
                 case 'stream_size':
                     this.sizeSubscriptions.dispatch(message.key, message.size)
