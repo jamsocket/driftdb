@@ -12,9 +12,9 @@ pub fn cors() -> Cors {
         .with_origins(vec!["*"])
 }
 
-fn use_http(ctx: &RouteContext<()>) -> Result<bool> {
-    let protocol = ctx.var("PROTOCOL")?;
-    Ok(protocol.to_string() == "HTTP")
+fn use_http(ctx: &RouteContext<()>) -> bool {
+    let Ok(protocol) = ctx.var("PROTOCOL") else { return false };
+    protocol.to_string() == "HTTP"
 }
 
 fn room_result(req: Request, room_id: &str, use_https: bool) -> Result<Response> {
