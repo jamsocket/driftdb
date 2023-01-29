@@ -107,11 +107,12 @@ export class DbConnection {
             switch (message.type) {
                 case 'init':
                     message.data.forEach((value) => {
+                        (value as any).key = message.key
                         this.subscriptions.dispatch(message.key, value)
                     })
                     break
                 case 'push':
-                    this.subscriptions.dispatch(message.key, message.value)
+                    this.subscriptions.dispatch(message.key, message)
                     break
                 case 'stream_size':
                     this.sizeSubscriptions.dispatch(message.key, message.size)

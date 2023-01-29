@@ -22,7 +22,10 @@ impl DatabaseInner {
                     if result.mutates() {
                         let data = self.store.dump(key, SequenceNumber::default());
 
-                        let message = MessageFromDatabase::Init { data, key: key.clone() };
+                        let message = MessageFromDatabase::Init {
+                            data,
+                            key: key.clone(),
+                        };
 
                         self.debug_connections.retain(|conn| {
                             if let Some(conn) = conn.upgrade() {
@@ -35,7 +38,8 @@ impl DatabaseInner {
                     } else if let Some(seq_value) = &result.broadcast {
                         let message = MessageFromDatabase::Push {
                             key: key.clone(),
-                            value: seq_value.clone(),
+                            value: seq_value.value.clone(),
+                            seq: seq_value.seq,
                         };
                         self.debug_connections.retain(|conn| {
                             if let Some(conn) = conn.upgrade() {
@@ -51,7 +55,8 @@ impl DatabaseInner {
                 if let Some(seq_value) = result.broadcast {
                     let message = MessageFromDatabase::Push {
                         key: key.clone(),
-                        value: seq_value,
+                        value: seq_value.value.clone(),
+                        seq: seq_value.seq,
                     };
                     self.connections.retain(|conn| {
                         if let Some(conn) = conn.upgrade() {
@@ -194,10 +199,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "bar": "baz" }),
-                    seq: SequenceNumber(1),
-                }
+                value: json!({ "bar": "baz" }),
+                seq: SequenceNumber(1),
             }),
             stash.next()
         );
@@ -208,10 +211,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "abc": "def" }),
-                    seq: SequenceNumber(2),
-                }
+                value: json!({ "abc": "def" }),
+                seq: SequenceNumber(2),
             }),
             stash.next()
         );
@@ -248,10 +249,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "bar": "baz" }),
-                    seq: SequenceNumber(1),
-                }
+                value: json!({ "bar": "baz" }),
+                seq: SequenceNumber(1),
             }),
             stash1.next()
         );
@@ -259,10 +258,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "bar": "baz" }),
-                    seq: SequenceNumber(1),
-                }
+                value: json!({ "bar": "baz" }),
+                seq: SequenceNumber(1),
             }),
             stash2.next()
         );
@@ -290,10 +287,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "bar": "baz" }),
-                    seq: SequenceNumber(1),
-                }
+                value: json!({ "bar": "baz" }),
+                seq: SequenceNumber(1),
             }),
             stash.next()
         );
@@ -338,10 +333,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "bar": "baz" }),
-                    seq: SequenceNumber(1),
-                }
+                value: json!({ "bar": "baz" }),
+                seq: SequenceNumber(1),
             }),
             stash1.next()
         );
@@ -372,10 +365,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "bar": "baz" }),
-                    seq: SequenceNumber(1),
-                }
+                value: json!({ "bar": "baz" }),
+                seq: SequenceNumber(1),
             }),
             stash.next()
         );
@@ -385,10 +376,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "abc": "def" }),
-                    seq: SequenceNumber(2),
-                }
+                value: json!({ "abc": "def" }),
+                seq: SequenceNumber(2),
             }),
             stash.next()
         );
@@ -405,10 +394,8 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: SequenceValue {
-                    value: json!({ "boo": "baa" }),
-                    seq: SequenceNumber(3),
-                }
+                value: json!({ "boo": "baa" }),
+                seq: SequenceNumber(3),
             }),
             stash.next()
         );

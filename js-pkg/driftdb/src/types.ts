@@ -4,14 +4,15 @@ export type SequenceNumber = number
 export type Action = {type: 'append' | 'replace' | 'relay'} | {type: 'compact', seq: SequenceNumber}
 
 export interface SequenceValue {
-    value: any
+    value: unknown
     seq: SequenceNumber
 }
 
 export type MessageFromDb = {
     type: 'push',
     key: Key,
-    value: SequenceValue,
+    value: unknown,
+    seq: SequenceNumber,
 } | {
     type: 'init',
     data: Array<SequenceValue>,
@@ -28,7 +29,7 @@ export type MessageFromDb = {
 export type MessageToDb = {
     type: 'push'
     action: Action
-    value: any
+    value: unknown
     key: Key
 } | {
     type: 'get'

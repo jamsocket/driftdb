@@ -59,9 +59,9 @@ const config = {
           },
           {
             type: 'doc',
-            docId: 'data-model',
+            docId: 'introduction',
             position: 'left',
-            label: 'Data Model',
+            label: 'Introduction',
           },
           {
             type: 'doc',

@@ -49,10 +49,8 @@ function App() {
   useEffect(() => {
     const listener = (message: MessageFromDb) => {
       if (message.type === "init") {
-        const keyState: Record<string, Array<SequenceValue>> = {}
-        for (let [key, value] of message.data) {
-          keyState[JSON.stringify(key)] = value
-        }
+        const _keyState = structuredClone(keyState)
+        _keyState[message.key] = message.data
         setKeyState(keyState)
         setMessages([message])
       } else if (message.type === "push" && message.value.seq !== undefined) {

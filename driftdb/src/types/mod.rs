@@ -63,7 +63,8 @@ pub struct SequenceValue {
 pub enum MessageFromDatabase {
     Push {
         key: Key,
-        value: SequenceValue,
+        value: Value,
+        seq: SequenceNumber,
     },
     Init {
         key: Key,
