@@ -13,7 +13,7 @@ const config = {
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.png',
-
+  
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -113,6 +113,10 @@ const config = {
         darkTheme: darkCodeTheme,
       },
     }),
+
+    scripts: [
+      { src: 'https://plausible.io/js/plausible.js', defer: true, 'data-domain': 'driftdb.com' }
+    ]
 };
 
 module.exports = config;
