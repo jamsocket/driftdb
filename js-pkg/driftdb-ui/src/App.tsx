@@ -53,13 +53,13 @@ function App() {
           _keyState[message.key] = message.data
           return _keyState
         })
-      } else if (message.type === "push" && message.value.seq !== undefined) {
+      } else if (message.type === "push" && message.seq !== undefined) {
         const key = message.key
         setKeyState((keyState) => {
           const value = keyState[key] || []
           return {
             ...keyState,
-            [key]: [...value, message.value]
+            [key]: [...value, {value: message.value, seq: message.seq}]
           }
         })
       }
