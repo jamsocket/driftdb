@@ -16,6 +16,10 @@ DriftDB is MIT-licensed Rust code. A client library is provided for JavaScript, 
 
 We also provide hosted DriftDB instances called <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
 
+<div style={{display: "flex", flexDirection: "row", justifyContent: "center", marginBottom: 30}}>
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/ktb6HUZlyJs" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div>
+
 ## Live Demos
 
 - [Shared State](https://demos.driftdb.com/state)
