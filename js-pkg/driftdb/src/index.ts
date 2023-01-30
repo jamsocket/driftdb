@@ -50,6 +50,30 @@ export class SubscriptionManager<T> {
     }
 }
 
+export class LatencyTest {
+    private startTime: number
+    private endTime: number | null = null
+    private signal: Promise<void>
+    private resolve!: () => void
+
+    constructor() {
+        this.startTime = performance.now()
+        this.signal = new Promise((resolve) => {
+            this.resolve = resolve
+        })
+    }
+
+    receivedResponse() {
+        this.endTime = performance.now()
+        this.resolve()
+    }
+
+    async result() {
+        await this.signal
+        return this.endTime! - this.startTime
+    }
+}
+
 export class DbConnection {
     connection: WebSocket | null = null
     status: ConnectionStatus = {connected: false}
@@ -60,6 +84,7 @@ export class DbConnection {
     private queue: Array<MessageToDb> = []
     private dbUrl: string | null = null
     private reconnectLoopHandle: number | null = null
+    private activeLatencyTest: LatencyTest | null = null
 
     connect(dbUrl: string) {
         this.dbUrl = dbUrl
@@ -119,8 +144,27 @@ export class DbConnection {
                 case 'stream_size':
                     this.sizeSubscriptions.dispatch(message.key, message.size)
                     break
+                case 'pong':
+                    if (this.activeLatencyTest) {
+                        this.activeLatencyTest.receivedResponse()
+                        this.activeLatencyTest = null
+                    }
+                    break
             }
         }
+    }
+
+    public testLatency(): Promise<number> | null {
+        if (!this.status.connected || this.connection?.readyState !== WebSocket.OPEN) {
+            return null
+        }
+
+        if (!this.activeLatencyTest) {
+            this.activeLatencyTest = new LatencyTest()
+            this.send({type: 'ping'})
+        }
+
+        return this.activeLatencyTest.result()
     }
 
     private debugUrl() {

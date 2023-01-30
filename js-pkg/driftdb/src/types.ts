@@ -24,6 +24,9 @@ export type MessageFromDb = {
     type: 'stream_size',
     key: Key,
     size: number
+} | {
+    type: 'pong',
+    nonce?: number,
 }
 
 export type MessageToDb = {
@@ -35,6 +38,9 @@ export type MessageToDb = {
     type: 'get'
     key: Key
     seq: SequenceNumber
+} | {
+    type: 'ping'
+    nonce?: number
 }
 
 export type ConnectionStatus = {

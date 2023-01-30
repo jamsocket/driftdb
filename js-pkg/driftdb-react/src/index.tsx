@@ -207,8 +207,31 @@ export function useConnectionStatus(): ConnectionStatus {
     return status;
 }
 
+export function useLatency(): number | null {
+    const db = useDatabase();
+    const [latency, setLatency] = React.useState<number | null>(null!);
+
+    React.useEffect(() => {
+        const updateLatency = async () => {
+            const result = await db?.testLatency();
+            setLatency(result);
+        }
+
+        const interval = setInterval(updateLatency, 5000);
+        updateLatency();
+
+        return () => {
+            clearInterval(interval);
+        }
+    }, [db]);
+
+    return latency;
+}
+
 export function StatusIndicator() {
     const status = useConnectionStatus();
+    const latency = useLatency();
+    const latencyStr = latency === null ? "..." : Math.round(latency).toString();
 
     let color
     if (status.connected) {
@@ -221,7 +244,12 @@ export function StatusIndicator() {
         <div style={{ display: 'inline-block', border: '1px solid #ccc', background: '#eee', borderRadius: 10, padding: 10 }}>
             DriftDB status: <span style={{ color, fontWeight: 'bold' }}>{status.connected ? "Connected" : "Disconnected"}</span>
             {
-                status.connected ? <>{" "}<span><a target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#aaa', fontSize: "70%" }} href={status.debugUrl}>(ui)</a></span></> : null
+                status.connected ? <>
+                    {" "}<span style={{fontSize: '70%', color: '#aaa'}}>
+                        <a target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#aaa' }} href={status.debugUrl}>(ui)</a>
+                        ({latencyStr}ms)
+                    </span>
+                </> : null
             }
         </div>
     );

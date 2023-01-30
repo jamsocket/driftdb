@@ -50,6 +50,9 @@ pub enum MessageToDatabase {
         /// Sequence number to start from.
         seq: SequenceNumber,
     },
+    Ping {
+        nonce: Option<u64>,
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
@@ -77,4 +80,7 @@ pub enum MessageFromDatabase {
         key: Key,
         size: usize,
     },
+    Pong {
+        nonce: Option<u64>,
+    }
 }

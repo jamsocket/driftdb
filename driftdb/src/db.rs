@@ -84,6 +84,9 @@ impl DatabaseInner {
                     key: key.clone(),
                 });
             }
+            MessageToDatabase::Ping { nonce } => {
+                return Some(MessageFromDatabase::Pong { nonce: *nonce });
+            }
         }
 
         None
