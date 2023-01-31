@@ -22,8 +22,6 @@ function Voxel(props: { voxel: Voxel }) {
             <boxGeometry args={[1, 1, 1]} />
 
             <meshPhongMaterial color={props.voxel.color} opacity={props.voxel.opacity} transparent={props.voxel.opacity < 1} />
-
-            {/* <meshStandardMaterial color={props.voxel.color} opacity={props.voxel.opacity} transparent={props.voxel.opacity < 1} /> */}
         </mesh>
     )
 }
@@ -34,7 +32,7 @@ function getPosition(event: ThreeEvent<PointerEvent>): Vector3Tuple | null {
     const {face, point} = event.intersections[0]
     const normal: Vector3 = face!.normal.clone()
 
-    const pos: Vector3 = point.clone()
+    const pos: Vector3 = point.clone().add(new Vector3(0.5, 0.0, 0.5))
 
     const c = pos.add(normal.multiplyScalar(0.5)).floor()
     return c.toArray()
