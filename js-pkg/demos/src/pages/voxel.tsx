@@ -97,10 +97,10 @@ export function VoxelEditor() {
                 }
 
                 {
-                    Object.values(presence).map((user, index) => {
+                    Object.entries(presence).map(([id, user]) => {
                         if (user.position === null) return null
 
-                        return <Voxel key={index} voxel={{ position: user.position, color: user.color, opacity: 0.5 }} />
+                        return <Voxel key={id} voxel={{ position: user.position, color: user.color, opacity: 0.5 }} />
                     })
                 }
                 

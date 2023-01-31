@@ -240,15 +240,22 @@ export function usePresence<T>(key: string, value: T): Record<string, T> {
     const clientId = useUniqueClientId()
 
     const [presence, setPresence] = useState<Record<string, T>>({})
+    const lastValue = useRef<string>("null")
 
     useEffect(() => {
         let message: PresenceMessage<T> = { client: clientId, value }
 
-        db.send({ type: "push", action: { "type": "relay" }, value: message, key })
+        const update = () => {
+            if (lastValue.current === JSON.stringify(message.value)) {
+                return
+            }
 
-        let interval = setInterval(() => {
+            lastValue.current = JSON.stringify(message.value)
             db.send({ type: "push", action: { "type": "relay" }, value: message, key })
-        }, intervalMs)
+        }
+
+        let interval = setInterval(update, intervalMs)
+        update()
 
         return () => {
             clearInterval(interval)
@@ -265,7 +272,7 @@ export function usePresence<T>(key: string, value: T): Record<string, T> {
             setPresence({...presence, [message.client]: message.value})
         }
         db.subscribe(key, callback)
-    }, [key, value])
+    }, [key])
 
     return presence
 }
