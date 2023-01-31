@@ -1,13 +1,13 @@
-import { Canvas, ThreeEvent } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
-import { useReducer, useRef, useState } from 'react'
-import { Vector3, Vector3Tuple } from 'three'
-import { DriftDBProvider, useSharedReducer } from 'driftdb-react'
 import { DRIFTDB_URL } from '@/config'
+import { OrbitControls } from '@react-three/drei'
+import { Canvas, ThreeEvent } from '@react-three/fiber'
+import { DriftDBProvider, useSharedReducer } from 'driftdb-react'
+import { useRef, useState } from 'react'
+import { Vector3, Vector3Tuple } from 'three'
 
 interface Voxel {
     position: Vector3Tuple
-    color: number
+    color: any
     opacity: number
 }
 
@@ -20,7 +20,10 @@ function Voxel(props: { voxel: Voxel }) {
             scale={1}
         >
             <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="hotpink" opacity={0.1} />
+
+            <meshPhongMaterial color={props.voxel.color} opacity={props.voxel.opacity} transparent={props.voxel.opacity < 1} />
+
+            {/* <meshStandardMaterial color={props.voxel.color} opacity={props.voxel.opacity} transparent={props.voxel.opacity < 1} /> */}
         </mesh>
     )
 }
@@ -29,9 +32,9 @@ function getPosition(event: ThreeEvent<PointerEvent>): Vector3Tuple | null {
     if (event.intersections.length === 0) return null
     
     const {face, point} = event.intersections[0]
-    
-    const normal: Vector3 = face!.normal
-    const pos: Vector3 = point
+    const normal: Vector3 = face!.normal.clone()
+
+    const pos: Vector3 = point.clone()
 
     const c = pos.add(normal.multiplyScalar(0.5)).floor()
     return c.toArray()
@@ -84,7 +87,7 @@ export function VoxelEditor() {
                 <pointLight position={[-10, -10, -10]} />
 
                 {
-                    ghostPosition ? <Voxel voxel={{ position: ghostPosition, color: 0xff0000, opacity: 0.5 }} /> : null
+                    ghostPosition ? <Voxel voxel={{ position: ghostPosition, color: 0x000000, opacity: 0.5 }} /> : null
                 }
                 
                 <gridHelper args={[11, 11]} position={[0, 0.001, 0]} />
