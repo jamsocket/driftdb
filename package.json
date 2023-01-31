@@ -2,5 +2,9 @@
   "name": "driftdb-workspace",
   "workspaces": [
     "js-pkg/*"
-  ]
+  ],
+  "dependencies": {
+    "@react-three/drei": "^9.56.10",
+    "@react-three/fiber": "^8.10.1"
+  }
 }
