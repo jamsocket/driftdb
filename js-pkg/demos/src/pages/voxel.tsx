@@ -2,8 +2,9 @@ import { DRIFTDB_URL } from '@/config'
 import { OrbitControls } from '@react-three/drei'
 import { Canvas, ThreeEvent } from '@react-three/fiber'
 import { DriftDBProvider, useSharedReducer } from 'driftdb-react'
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Vector3, Vector3Tuple } from 'three'
+import { CompactPicker } from 'react-color'
 
 interface Voxel {
     position: Vector3Tuple
@@ -54,6 +55,7 @@ function voxelReducer(state: Voxel[], action: VoxelAction): Voxel[] {
 export function VoxelEditor() {
     const [ghostPosition, setGhostPosition] = useState<[number, number, number] | null>(null)
     const [voxels, dispatch] = useSharedReducer("voxels", voxelReducer, [] as any)
+    const [color, setColor] = useState('#D33115')
 
     const positionHasBeenSet = useRef(false)
     const setInitialCameraPosition = (controls: any) => {
@@ -63,21 +65,22 @@ export function VoxelEditor() {
         }
     }
 
-    const pointerMove = (event: ThreeEvent<PointerEvent>) => {
+    const pointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
         setGhostPosition(getPosition(event))
-    }
+    }, [setGhostPosition])
 
-    const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {
         const position = getPosition(event as any)
         if (position) {
             dispatch({
                 type: 'add',
-                voxel: { position, color: 0xff0000, opacity: 1 }
+                voxel: { position, color, opacity: 1 }
             })
         }
-    }
+    }, [color, dispatch])
 
     return (
+        <>
         <div style={{ position: 'absolute', top: 0, right: 0, left: 0, bottom: 0 }}>
             <Canvas>
                 <ambientLight intensity={0.5} />
@@ -106,6 +109,8 @@ export function VoxelEditor() {
                 <OrbitControls ref={setInitialCameraPosition} />
             </Canvas>
         </div>
+        <CompactPicker color={color} onChangeComplete={(color) => setColor(color.hex)} />
+        </>
     )
 }
 
