@@ -12,9 +12,16 @@ export default function Demos() {
       <div>
         <h1>DriftDB Demos</h1>
         <ul>
+          <li>Basic</li>
+          <ul>
             <li><Link href="/state">Shared State</Link></li>
             <li><Link href="/counter">Counter</Link></li>
             <li><Link href="/tictactoe">Tic Tac Toe</Link></li>
+          </ul>
+          <li>Advanced</li>
+          <ul>
+            <li><Link href="/voxel">Voxel Editor</Link></li>
+          </ul>
         </ul>
       </div>
     </>
