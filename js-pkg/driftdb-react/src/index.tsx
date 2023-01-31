@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { DbConnection } from "driftdb"
 import { Api, RoomResult } from "driftdb/dist/api"
 import { ConnectionStatus, SequenceValue } from "driftdb/dist/types";
@@ -209,7 +209,7 @@ export function useConnectionStatus(): ConnectionStatus {
 
 export function useLatency(): number | null {
     const db = useDatabase();
-    const [latency, setLatency] = React.useState<number | null>(null!);
+    const [latency, setLatency] = useState<number | null>(null!);
 
     React.useEffect(() => {
         const updateLatency = async () => {
@@ -226,6 +226,48 @@ export function useLatency(): number | null {
     }, [db]);
 
     return latency;
+}
+
+interface PresenceMessage<T> {
+    client: string
+    value: T
+}
+
+export function usePresence<T>(key: string, value: T): Record<string, T> {
+    const intervalMs = 1000
+
+    const db = useDatabase()
+    const clientId = useUniqueClientId()
+
+    const [presence, setPresence] = useState<Record<string, T>>({})
+
+    useEffect(() => {
+        let message: PresenceMessage<T> = { client: clientId, value }
+
+        db.send({ type: "push", action: { "type": "relay" }, value: message, key })
+
+        let interval = setInterval(() => {
+            db.send({ type: "push", action: { "type": "relay" }, value: message, key })
+        }, intervalMs)
+
+        return () => {
+            clearInterval(interval)
+        }
+    }, [key, value, clientId])
+
+    React.useEffect(() => {
+        const callback = (event: SequenceValue) => {
+            let message: PresenceMessage<T> = event.value as any
+            if (message.client === clientId) {
+                return
+            }
+
+            setPresence({...presence, [message.client]: message.value})
+        }
+        db.subscribe(key, callback)
+    }, [key, value])
+
+    return presence
 }
 
 export function StatusIndicator() {
@@ -261,7 +303,7 @@ interface DriftDBProviderProps {
 }
 
 export function DriftDBProvider(props: DriftDBProviderProps) {
-    const dbRef = React.useRef<DbConnection | null>(null);
+    const dbRef = useRef<DbConnection | null>(null);
     if (dbRef.current === null) {
         dbRef.current = new DbConnection();
     }

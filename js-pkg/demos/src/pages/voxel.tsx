@@ -1,7 +1,7 @@
 import { DRIFTDB_URL } from '@/config'
 import { OrbitControls } from '@react-three/drei'
 import { Canvas, ThreeEvent } from '@react-three/fiber'
-import { DriftDBProvider, useSharedReducer } from 'driftdb-react'
+import { DriftDBProvider, usePresence, useSharedReducer } from 'driftdb-react'
 import { useCallback, useRef, useState } from 'react'
 import { Vector3, Vector3Tuple } from 'three'
 import { CompactPicker } from 'react-color'
@@ -65,6 +65,11 @@ export function VoxelEditor() {
         }
     }
 
+    const presence = usePresence("users", {
+        position: ghostPosition,
+        color: color
+    })
+    
     const pointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
         setGhostPosition(getPosition(event))
     }, [setGhostPosition])
@@ -89,6 +94,14 @@ export function VoxelEditor() {
 
                 {
                     ghostPosition ? <Voxel voxel={{ position: ghostPosition, color: 0x000000, opacity: 0.5 }} /> : null
+                }
+
+                {
+                    Object.values(presence).map((user, index) => {
+                        if (user.position === null) return null
+
+                        return <Voxel key={index} voxel={{ position: user.position, color: user.color, opacity: 0.5 }} />
+                    })
                 }
                 
                 <gridHelper args={[11, 11]} position={[0, 0.001, 0]} />
