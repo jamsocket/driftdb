@@ -147,7 +147,6 @@ export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: 
 
     React.useEffect(() => {
         const callback = (sequenceValue: SequenceValue) => {
-            console.log('sv', sequenceValue)
             if (sequenceValue.seq <= lastConfirmedSeq.current!) {
                 return;
             }

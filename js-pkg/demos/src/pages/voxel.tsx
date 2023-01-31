@@ -12,11 +12,11 @@ interface Voxel {
     opacity: number
 }
 
-function Voxel(props: { voxel: Voxel }) {
+function Voxel(props: { voxel: Voxel, name?: string }) {
     const position: Vector3Tuple = [props.voxel.position[0], props.voxel.position[1] + 0.5, props.voxel.position[2]]
     return (
         <mesh
-            {...props}
+            name={props.name}
             position={position}
             scale={1}
         >
@@ -42,11 +42,25 @@ function getPosition(event: ThreeEvent<PointerEvent>): Vector3Tuple | null {
 type VoxelAction = {
     type: 'add'
     voxel: Voxel
+} | {
+    type: 'remove'
+    name: string
 }
 
-function voxelReducer(state: Voxel[], action: VoxelAction): Voxel[] {
+function voxelReducer(state: Record<string, Voxel>, action: VoxelAction): Record<string, Voxel> {
     if (action.type === 'add') {
-        return [...state, action.voxel]
+        let key = action.voxel.position.join(':')
+
+        return {
+            ...state,
+            [key]: action.voxel
+        }
+    }
+
+    if (action.type === 'remove') {
+        const newState = { ...state }
+        delete newState[action.name]
+        return newState
     }
 
     return state
@@ -75,6 +89,18 @@ export function VoxelEditor() {
     }, [setGhostPosition])
 
     const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {
+        if (event.shiftKey) {
+            if (event.object.name) {
+                dispatch({
+                    type: 'remove',
+                    name: event.object.name
+                })
+            }
+
+            event.stopPropagation()
+            return
+        }
+
         const position = getPosition(event as any)
         if (position) {
             dispatch({
@@ -116,7 +142,7 @@ export function VoxelEditor() {
                     </mesh>
 
                     {
-                        voxels.map((voxel, index) => <Voxel key={index} voxel={voxel} />)
+                        Object.entries(voxels).map(([index, voxel]) => <Voxel key={index} voxel={voxel} name={index} />)
                     }
                 </group>
                 <OrbitControls ref={setInitialCameraPosition} />
