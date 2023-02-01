@@ -20,6 +20,7 @@ export default function Demos() {
           </ul>
           <li>Advanced</li>
           <ul>
+            <li><Link href="/shared-canvas">Shared Canvas</Link></li>
             <li><Link href="/voxel">Voxel Editor</Link></li>
           </ul>
         </ul>
