@@ -25,6 +25,7 @@ We also provide hosted DriftDB instances called <a href="https://jamsocket.live"
 - [Shared State](https://demos.driftdb.com/state)
 - [Counter](https://demos.driftdb.com/counter)
 - [Tic Tac Toe](https://demos.driftdb.com/tictactoe)
+- [Voxel Editor](https://demos.driftdb.com/voxel)
 
 ## React example
 
