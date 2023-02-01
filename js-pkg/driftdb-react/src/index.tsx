@@ -232,45 +232,109 @@ interface PresenceMessage<T> {
     value: T
 }
 
-export function usePresence<T>(key: string, value: T): Record<string, T> {
-    const intervalMs = 1000
+type WrappedPresenceMessage<T> = {
+    value: T,
+    lastSeen: number
+}
 
+const MIN_PRESENCE_INTERVAL = 100
+const MAX_PRESENCE_INTERVAL = 1_000
+
+class PresenceListener<T> {
+    // Time of the last update caused by a state change (not regular interval).
+    private lastUpdate = 0
+    
+    // True if we have a pending update.
+    private nextUpdate: number
+
+    private updateHandle: ReturnType<typeof setTimeout>
+
+    constructor(private state: T, private db: DbConnection, private key: string, private clientId: string) {
+        this.nextUpdate = Date.now()
+
+        this.updateHandle = setTimeout(() => {            
+            this.update()
+        }, 0)
+    }
+
+    private update() {
+        this.db.send({
+            type: "push",
+            action: { type: "relay" },
+            value: { value: this.state, client: this.clientId },
+            key: this.key
+        })
+
+        this.nextUpdate = Date.now() + MAX_PRESENCE_INTERVAL
+        this.lastUpdate = Date.now()
+        this.updateHandle = setTimeout(() => {
+            this.update()
+        }, MAX_PRESENCE_INTERVAL)        
+    }
+
+    updateState(value: T) {
+        if (JSON.stringify(value) === JSON.stringify(this.state)) {
+            return
+        }
+
+        this.state = value
+        
+        const nextUpdate = this.lastUpdate + MIN_PRESENCE_INTERVAL
+
+        if (nextUpdate < this.nextUpdate) {
+            this.nextUpdate = nextUpdate
+            clearTimeout(this.updateHandle)
+            this.updateHandle = setTimeout(() => {
+                this.update()
+            }, this.nextUpdate - Date.now())
+        }
+    }
+}
+
+export function usePresence<T>(key: string, value: T): Record<string, WrappedPresenceMessage<T>> {
     const db = useDatabase()
     const clientId = useUniqueClientId()
+    const [presence, setPresence] = useState<Record<string, WrappedPresenceMessage<T>>>({})
+    
+    const presenceListener = useRef<PresenceListener<T>>()
+    if (presenceListener.current === undefined) {
+        presenceListener.current = new PresenceListener(value, db, key, clientId)
+    }
 
-    const [presence, setPresence] = useState<Record<string, T>>({})
-    const lastValue = useRef<string>("null")
-
-    useEffect(() => {
-        let message: PresenceMessage<T> = { client: clientId, value }
-
-        const update = () => {
-            if (lastValue.current === JSON.stringify(message.value)) {
-                return
-            }
-
-            lastValue.current = JSON.stringify(message.value)
-            db.send({ type: "push", action: { "type": "relay" }, value: message, key })
-        }
-
-        let interval = setInterval(update, intervalMs)
-        update()
-
-        return () => {
-            clearInterval(interval)
-        }
-    }, [key, value, clientId])
-
+    presenceListener.current.updateState(value)
+    
     React.useEffect(() => {
         const callback = (event: SequenceValue) => {
             let message: PresenceMessage<T> = event.value as any
             if (message.client === clientId) {
+                // Ignore our own messages.
                 return
             }
 
-            setPresence({...presence, [message.client]: message.value})
+            setPresence((presence) => ({...presence, [message.client]: {
+                value: message.value,
+                lastSeen: Date.now()
+            }}))
         }
+
+        const interval = setInterval(() => {
+            setPresence((presence) => {
+                let newPresence: Record<string, WrappedPresenceMessage<T>> = {}
+                for (let client in presence) {
+                    if (Date.now() - presence[client].lastSeen < MAX_PRESENCE_INTERVAL * 2) {
+                        newPresence[client] = presence[client]
+                    }
+                }
+                return newPresence
+            })
+        }, MAX_PRESENCE_INTERVAL)
+
         db.subscribe(key, callback)
+
+        return () => {
+            db.unsubscribe(key, callback)
+            clearInterval(interval)
+        }
     }, [key])
 
     return presence
