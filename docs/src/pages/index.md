@@ -13,6 +13,8 @@
 - Key/value storage with subscriptions
 - Ordered streams
 
+As an example of what it’s capable of, here’s a [multiplayer voxel editor](https://demos.driftdb.com/voxel) in [under 200 lines of code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/voxel.tsx).
+
 <div style={{display: "flex", flexDirection: "row", justifyContent: "center", margin: 25}}>
 <video controls autoplay style={{maxWidth: "100%"}}>
   <source src="/driftdb-voxel.webm" type="video/webm" />
