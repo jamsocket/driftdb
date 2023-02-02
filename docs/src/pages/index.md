@@ -13,20 +13,23 @@
 - Key/value storage with subscriptions
 - Ordered streams
 
+<div style={{display: "flex", flexDirection: "row", justifyContent: "center", margin: 25}}>
+<video controls autoplay style={{maxWidth: "100%"}}>
+  <source src="/driftdb-voxel.webm" type="video/webm" />
+  <source src="/driftdb-voxel.mp4" type="video/mp4" />
+</video>
+</div>
+
 DriftDB is MIT-licensed Rust code. A client library is provided for JavaScript, as well as ergonomic React bindings.
 
 We also provide hosted DriftDB instances called <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
 
-<div style={{display: "flex", flexDirection: "row", justifyContent: "center", marginBottom: 30}}>
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/ktb6HUZlyJs" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-</div>
-
 ## Live Demos
 
-- [Shared State](https://demos.driftdb.com/state)
-- [Counter](https://demos.driftdb.com/counter)
-- [Tic Tac Toe](https://demos.driftdb.com/tictactoe)
-- [Voxel Editor](https://demos.driftdb.com/voxel)
+- [Shared State](https://demos.driftdb.com/state) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/shared-canvas.tsx))
+- [Counter](https://demos.driftdb.com/counter) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/counter.tsx))
+- [Tic Tac Toe](https://demos.driftdb.com/tictactoe) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/tictactoe.tsx))
+- [Voxel Editor](https://demos.driftdb.com/voxel) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/voxel.tsx))
 
 ## React example
 
@@ -66,7 +69,7 @@ The room in the example above depends on whether the user visits the page direct
 
 A connection with the server is scoped to a **room**. Messages to multiple subjects (within the same room) are multiplexed over one connection.
 
-For more details on DriftDB-React, see [the React docs](/docs/react).
+For more details on DriftDB-React, see [the React docs](/docs/react) or [this four-minute tutorial video](https://www.youtube.com/watch?v=ktb6HUZlyJs).
 
 ## Limitations
 
