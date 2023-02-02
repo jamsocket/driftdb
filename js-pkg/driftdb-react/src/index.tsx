@@ -370,6 +370,7 @@ export function StatusIndicator() {
 interface DriftDBProviderProps {
     children: React.ReactNode
     api: string
+    room?: string
 }
 
 export function DriftDBProvider(props: DriftDBProviderProps) {
@@ -381,11 +382,13 @@ export function DriftDBProvider(props: DriftDBProviderProps) {
     React.useEffect(() => {
         let api = new Api(props.api);
 
-        const searchParams = new URLSearchParams(window.location.search);
-        let roomId = (
-            searchParams.get(ROOM_ID_KEY) ??
-            sessionStorage.getItem(ROOM_ID_KEY) ??
-            null);
+        let roomId
+        if (props.room) {
+            roomId = props.room
+        } else {
+            const searchParams = new URLSearchParams(window.location.search)
+            roomId = searchParams.get(ROOM_ID_KEY)
+        }
 
         let promise
         if (roomId) {
@@ -395,9 +398,11 @@ export function DriftDBProvider(props: DriftDBProviderProps) {
         }
 
         promise.then((result: RoomResult) => {
-            let url = new URL(window.location.href);
-            url.searchParams.set(ROOM_ID_KEY, result.room);
-            window.history.replaceState({}, "", url.toString());
+            if (!props.room) {
+                let url = new URL(window.location.href);
+                url.searchParams.set(ROOM_ID_KEY, result.room);
+                window.history.replaceState({}, "", url.toString());
+            }
 
             dbRef.current?.connect(result.socket_url);
         });
