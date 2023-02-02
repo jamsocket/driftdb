@@ -1,19 +1,18 @@
 use anyhow::Result;
 use axum::{
     body::BoxBody,
-    error_handling::HandleError,
     extract::{ws::WebSocket, Query, State, WebSocketUpgrade},
     response::Response,
     routing::get,
     Router,
 };
+use dashmap::DashMap;
 use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
-use hyper::{Method, StatusCode};
+use hyper::Method;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::{
     cors::{AllowOrigin, CorsLayer},
-    services::ServeDir,
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
@@ -140,12 +139,21 @@ struct ConnectionQuery {
     debug: bool,
 }
 
+type RoomMap = DashMap<String, Arc<Database>>;
+
 async fn connection(
     ws: WebSocketUpgrade,
-    State(database): State<Arc<Database>>,
+    State(room_map): State<Arc<RoomMap>>,
     Query(query): Query<ConnectionQuery>,
 ) -> Response<BoxBody> {
-    ws.on_upgrade(move |socket| handle_socket(socket, database, query.debug))
+    ws.on_upgrade(move |socket| handle_socket(socket, room_map, query.debug))
+}
+
+#[derive(Serialize)]
+struct RoomResult {
+    room: String,
+    socket_url: String,
+    http_url: String,
 }
 
 pub fn api_routes() -> Result<Router> {
@@ -153,19 +161,12 @@ pub fn api_routes() -> Result<Router> {
         .allow_methods([Method::GET])
         .allow_origin(AllowOrigin::any());
 
-    let database = Database::new();
+    let room_map = RoomMap::new();
 
     Ok(Router::new()
         .route("/ws", get(connection))
         .layer(cors)
-        .with_state(Arc::new(database)))
-}
-
-async fn handle_servedir_error(err: std::io::Error) -> (StatusCode, String) {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Something went wrong: {}", err),
-    )
+        .with_state(Arc::new(room_map)))
 }
 
 pub async fn run_server(opts: &Opts) -> anyhow::Result<()> {
@@ -174,13 +175,7 @@ pub async fn run_server(opts: &Opts) -> anyhow::Result<()> {
         .on_request(DefaultOnRequest::new().level(Level::INFO))
         .on_response(DefaultOnResponse::new().level(Level::INFO));
 
-    let app = Router::new()
-        .nest("/api/", api_routes()?)
-        .nest_service(
-            "/",
-            HandleError::new(ServeDir::new("../driftdb-ui/build"), handle_servedir_error),
-        )
-        .layer(trace_layer);
+    let app = api_routes()?.layer(trace_layer);
     let addr = SocketAddr::new(opts.host, opts.port);
 
     tracing::info!(?addr, "Server is listening.");
