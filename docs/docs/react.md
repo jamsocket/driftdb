@@ -29,6 +29,8 @@ The provider takes a required parameter `database`, which must be the URL of a r
 </DriftDBProvider>
 ```
 
+If you don’t explicitly pass a `room` parameter and there is not one already in the URL, `DriftDBProvider` will talk to the API to create a room, and add it to the current location URL. Alternatively, you can talk to the API on your own (possibly in the backend) to create a room, and pass it as the `room` parameter. If you explicitly pass in a `room`, `DriftDBProvider` will not modify the current URL.
+
 ## `useConnectionStatus` hook
 
 The `useConnectionStatus` hook returns an object with the current connection status of the database. If the status is *connected*, it also returns a link to a debug UI for the room.
