@@ -40,6 +40,7 @@ As a general rule, DriftDB is useful any time you wish you could connect directl
 - [Counter](https://demos.driftdb.com/counter) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/counter.tsx))
 - [Tic Tac Toe](https://demos.driftdb.com/tictactoe) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/tictactoe.tsx))
 - [Voxel Editor](https://demos.driftdb.com/voxel) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/voxel.tsx))
+- [Shared Canvas](https://demos.driftdb.com/shared-canvas) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/shared-canvas.tsx))
 
 ## React example
 
