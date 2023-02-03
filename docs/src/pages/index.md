@@ -26,6 +26,14 @@ DriftDB is MIT-licensed Rust code. A client library is provided for JavaScript, 
 
 We also provide hosted DriftDB instances called <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
 
+## Use cases
+
+As a general rule, DriftDB is useful any time you wish you could connect directly from one browser to another, or from a non-web-connected backend (e.g. background task) to a browser. Examples include:
+
+- Backend for state synchronization in real-time collaborative apps (e.g. a whiteboard or casual multiplayer game)
+- Streaming build logs in real time in a CI/CD system
+- WebRTC signaling
+
 ## Live Demos
 
 - [Shared State](https://demos.driftdb.com/state) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/shared-canvas.tsx))
