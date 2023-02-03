@@ -24,7 +24,7 @@ As an example of what it’s capable of, here’s a [multiplayer voxel editor](h
 
 DriftDB is MIT-licensed Rust code. A client library is provided for JavaScript, as well as ergonomic React bindings.
 
-We also provide hosted DriftDB instances called <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
+We also provide free hosted DriftDB instances at <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
 
 ## Use cases
 
