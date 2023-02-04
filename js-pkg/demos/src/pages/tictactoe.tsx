@@ -70,7 +70,7 @@ function ticTacToeReducer(state: GameState, action: ActionType): GameState {
             ]
             for (let i = 0; i < lines.length; i++) {
                 const [a, b, c] = lines[i]
-                if (state.board[a] && state.board[a] === state.board[b] && state.board[a] === state.board[c]) {
+                if (state.board[a] !== null && state.board[a] === state.board[b] && state.board[a] === state.board[c]) {
                     winner = state.board[a]
                 }
             }
