@@ -18,7 +18,7 @@ DriftDB-React makes use of two react patterns: a **provider** to connect to the 
 
 Components must be enclosed in a `DriftDBProvider` component to use the hooks that DriftDB-React provides (this approach ensures that all hooks share the underlying connection). You should not use multiple `DriftDBProvider` instances on the same page; instead, put a single `DriftDBProvider` component high enough up in the document tree that all components which need to use the database are children of it.
 
-The provider takes a required parameter `database`, which must be the URL of a running DriftDB server. This can either be one that you run on your own, or one provided by [Jamsocket Live](https://jamsocket.live).
+The provider takes a required parameter `api`, which must be the URL of a running DriftDB server. This can either be one that you run on your own, or one provided by [Jamsocket Live](https://jamsocket.live).
 
 ```jsx
 <DriftDBProvider api="https://jamsocket.live/db/[YOUR_KEY]">

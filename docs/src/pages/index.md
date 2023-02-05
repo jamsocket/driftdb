@@ -24,7 +24,15 @@ As an example of what it’s capable of, here’s a [multiplayer voxel editor](h
 
 DriftDB is MIT-licensed Rust code. A client library is provided for JavaScript, as well as ergonomic React bindings.
 
-We also provide hosted DriftDB instances called <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
+We also provide free hosted DriftDB instances at <a href="https://jamsocket.live">Jamsocket Live</a>. These docs are applicable both to self-hosted and Jamsocket Live instances.
+
+## Use cases
+
+As a general rule, DriftDB is useful any time you wish you could connect directly from one browser to another, or from a non-web-connected backend (e.g. background task) to a browser. Examples include:
+
+- Backend for state synchronization in real-time collaborative apps (e.g. a whiteboard or casual multiplayer game)
+- Streaming build logs in real time in a CI/CD system
+- WebRTC signaling
 
 ## Live Demos
 
@@ -32,6 +40,7 @@ We also provide hosted DriftDB instances called <a href="https://jamsocket.live"
 - [Counter](https://demos.driftdb.com/counter) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/counter.tsx))
 - [Tic Tac Toe](https://demos.driftdb.com/tictactoe) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/tictactoe.tsx))
 - [Voxel Editor](https://demos.driftdb.com/voxel) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/voxel.tsx))
+- [Shared Canvas](https://demos.driftdb.com/shared-canvas) ([code](https://github.com/drifting-in-space/driftdb/blob/main/js-pkg/demos/src/pages/shared-canvas.tsx))
 
 ## React example
 
@@ -65,7 +74,7 @@ export default function SliderDemo() {
 }
 ```
 
-All messages in DriftDB belong to a **room**, and have a **subject**. Rooms and subjects are both represented by strings. Rooms are represented by a unique generated string of characters. Subjects are chosen by he developer and usually have a meaning in the context of the application. In the example above, `slider` is the name of the subject used for synchronziing the state of the range slider input.
+All messages in DriftDB belong to a **room**, and have a **subject**. Rooms and subjects are both represented by strings. Rooms are represented by a unique generated string of characters. Subjects are chosen by the developer and usually have a meaning in the context of the application. In the example above, `slider` is the name of the subject used for synchronizing the state of the range slider input.
 
 The room in the example above depends on whether the user visits the page directly or via a link that includes a room ID. If the user visits the page directly, a new room ID is generated and inserted into the URL. If another user opens the same URL, they will be connected to the same room, and instantly be sharing state. This is not behavior of DriftDB itself, but of the `DriftDBProvider` React component used as a client.
 
