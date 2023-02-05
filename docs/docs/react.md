@@ -98,6 +98,10 @@ Like `useSharedState`, `useSharedReducer` is optimistic, so calls to `dispatch` 
 
 To avoid the sequence from growing indefinitely, `useSharedReducer` uses **cooperative compaction**. Clients coordinate with the database so that when the sequence for a given key grows too long, the client will replace it with a snapshot of the state at a more recent version, and instructs the server to discard all changes prior to that version.
 
+## `usePresence` hook
+
+The `usePresence` hook takes a value corresponding to the active client (e.g. current cursor position) and returns an object containing the values that _other_ clients sent. The keys of the object are unique client IDs, the same as returned by `useUniqueClientId`.
+
 ## `useDatabase` hook
 
 The `useDatabase` hook returns an instance of the DriftDB database itself. This is useful if you want to access the database on a lower level than is exposed through the other hooks.
