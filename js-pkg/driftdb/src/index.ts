@@ -1,5 +1,7 @@
 import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
 
+const CLIENT_ID_KEY = "_driftdb_client_id"
+
 export class EventListener<T> {
     listeners: Array<(event: T) => void> = []
 
@@ -205,6 +207,133 @@ export class DbConnection {
         this.subscriptions.unsubscribe(subject, listener)
         if (sizeCallback) {
             this.sizeSubscriptions.unsubscribe(subject, sizeCallback)
+        }
+    }
+}
+
+export class StateListener<T> {
+    lastUpdateSent: number = 0
+    lastValue: T | null = null
+    debounceTimeout: number | null = null
+
+    constructor(
+        private callback: (value: T) => void,
+        private db: DbConnection,
+        private key: string,
+        private debounceMillis: number = 50
+    ) {
+        this.callback = callback.bind(this)
+        this.setStateOptimistic = this.setStateOptimistic.bind(this)
+        this.sendUpdate = this.sendUpdate.bind(this)
+
+        db.subscribe(key, (value: SequenceValue) => {
+            this.callback(value.value as T)
+        })
+    }
+
+    onMessage(value: SequenceValue) {
+        this.callback(value.value as T)
+    }
+
+    sendUpdate() {
+        if (this.debounceTimeout !== null) {
+            window.clearTimeout(this.debounceTimeout)
+            this.debounceTimeout = null
+        }
+        this.db?.send({
+            type: "push",
+            action: { "type": "replace" },
+            value: this.lastValue,
+            key: this.key
+        })
+    }
+
+    setStateOptimistic(value: T) {
+        this.callback(value)
+
+        this.lastValue = value
+        const now = performance.now()
+        if (now - this.lastUpdateSent < this.debounceMillis) {
+            if (this.debounceTimeout === null) {
+                this.debounceTimeout = window.setTimeout(this.sendUpdate, this.debounceMillis)
+            }
+        } else {
+            this.lastUpdateSent = now
+            this.sendUpdate()
+        }
+    }
+}
+
+export function uniqueClientId(): string {
+    if (sessionStorage.getItem(CLIENT_ID_KEY)) {
+        return sessionStorage.getItem(CLIENT_ID_KEY)!
+    } else {
+        let clientId = crypto.randomUUID()
+        sessionStorage.setItem(CLIENT_ID_KEY, clientId)
+        return clientId
+    }
+}
+
+export interface PresenceMessage<T> {
+    client: string
+    value: T
+}
+
+export type WrappedPresenceMessage<T> = {
+    value: T,
+    lastSeen: number
+}
+
+export const MIN_PRESENCE_INTERVAL = 100
+export const MAX_PRESENCE_INTERVAL = 1_000
+
+export class PresenceListener<T> {
+    // Time of the last update caused by a state change (not regular interval).
+    private lastUpdate = 0
+    
+    // True if we have a pending update.
+    private nextUpdate: number
+
+    private updateHandle: ReturnType<typeof setTimeout>
+
+    constructor(private state: T, private db: DbConnection, private key: string, private clientId: string) {
+        this.nextUpdate = Date.now()
+
+        this.updateHandle = setTimeout(() => {            
+            this.update()
+        }, 0)
+    }
+
+    private update() {
+        this.db.send({
+            type: "push",
+            action: { type: "relay" },
+            value: { value: this.state, client: this.clientId },
+            key: this.key
+        })
+
+        this.nextUpdate = Date.now() + MAX_PRESENCE_INTERVAL
+        this.lastUpdate = Date.now()
+        this.updateHandle = setTimeout(() => {
+            this.update()
+        }, MAX_PRESENCE_INTERVAL)        
+    }
+
+    updateState(value: T) {
+        if (JSON.stringify(value) === JSON.stringify(this.state)) {
+            return
+        }
+
+        this.state = value
+        
+        const nextUpdate = this.lastUpdate + MIN_PRESENCE_INTERVAL
+
+        if (nextUpdate < this.nextUpdate) {
+            this.nextUpdate = nextUpdate
+            clearTimeout(this.updateHandle)
+            this.updateHandle = setTimeout(() => {
+                this.update()
+            }, this.nextUpdate - Date.now())
         }
     }
 }
