@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { DbConnection, MAX_PRESENCE_INTERVAL, PresenceListener, PresenceMessage, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb"
+import { DbConnection, PresenceListener, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb"
 import { Api, RoomResult } from "driftdb/dist/api"
 import { ConnectionStatus, SequenceValue } from "driftdb/dist/types";
 
