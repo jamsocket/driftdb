@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { DbConnection, PresenceListener, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb"
+import { DbConnection, PresenceListener, Reducer, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb"
 import { Api, RoomResult } from "driftdb/dist/api"
-import { ConnectionStatus, SequenceValue } from "driftdb/dist/types";
+import { ConnectionStatus } from "driftdb/dist/types";
 
 const ROOM_ID_KEY = "_driftdb_room"
 
@@ -74,58 +74,23 @@ export function useUniqueClientId(): string {
     return currentId.current
 }
 
-export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: A) => T, initialValue: T, sizeThreshold: number = 5): [T, (action: A) => void] {
+export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: A) => T, initialValue: T, sizeThreshold?: number): [T, (action: A) => void] {
     const db = useDatabase();
     const [state, setState] = React.useState<T>(structuredClone(initialValue));
-    const lastConfirmedState = React.useRef<T>(initialValue);
-    const lastConfirmedSeq = React.useRef<number>(0);
 
-    const dispatch = (action: any) => {
-        const value = reducer(state, action);
-        setState(value);
-        db?.send({ type: "push", action: { "type": "append" }, value: { "apply": action }, key });
-    };
+    const reducerRef = React.useRef<Reducer<T, A> | null>(null)
+    if (reducerRef.current === null) {
+        reducerRef.current = new Reducer({
+            key,
+            reducer,
+            initialValue,
+            sizeThreshold,
+            db,
+            callback: setState
+        })
+    }
 
-    React.useEffect(() => {
-        const callback = (sequenceValue: SequenceValue) => {
-            if (sequenceValue.seq <= lastConfirmedSeq.current!) {
-                return;
-            }
-
-            const value = sequenceValue.value as any;
-
-            if (value.reset !== undefined) {
-                lastConfirmedState.current = value.reset as T;
-                lastConfirmedSeq.current = sequenceValue.seq;
-                setState(structuredClone(lastConfirmedState.current));
-                return;
-            }
-
-            if (value.apply !== undefined) {
-                lastConfirmedState.current = reducer(lastConfirmedState.current, value.apply as A);
-                lastConfirmedSeq.current = sequenceValue.seq;
-                setState(structuredClone(lastConfirmedState.current));
-                return;
-            }
-
-            console.log("Unknown message", sequenceValue.value)
-        };
-        const sizeCallback = (size: number) => {
-            if (size > sizeThreshold && lastConfirmedSeq.current !== null) {
-                db?.send({
-                    type: "push",
-                    action: { "type": "compact", seq: lastConfirmedSeq.current },
-                    value: { "reset": lastConfirmedState.current },
-                    key
-                });
-            }
-        }
-
-        db?.subscribe(key, callback, sizeCallback);
-        return () => {
-            db?.unsubscribe(key, callback);
-        };
-    }, [key]);
+    const dispatch = reducerRef.current.dispatch;
 
     return [state, dispatch];
 }

@@ -2,6 +2,7 @@ import { LatencyTest } from "./latency"
 import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
 export { PresenceListener, WrappedPresenceMessage, PresenceMessage } from "./presence"
 export { StateListener } from "./state"
+export { Reducer } from "./reducer"
 
 const CLIENT_ID_KEY = "_driftdb_client_id"
 
