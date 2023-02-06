@@ -175,45 +175,17 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
     
     const presenceListener = useRef<PresenceListener<T>>()
     if (presenceListener.current === undefined) {
-        presenceListener.current = new PresenceListener(value, db, key, clientId)
+        presenceListener.current = new PresenceListener({
+            key,
+            db,
+            clientId,
+            initialState: value,
+            callback: setPresence,
+        })
     }
 
     presenceListener.current.updateState(value)
     
-    React.useEffect(() => {
-        const callback = (event: SequenceValue) => {
-            let message: PresenceMessage<T> = event.value as any
-            if (message.client === clientId) {
-                // Ignore our own messages.
-                return
-            }
-
-            setPresence((presence) => ({...presence, [message.client]: {
-                value: message.value,
-                lastSeen: Date.now()
-            }}))
-        }
-
-        const interval = setInterval(() => {
-            setPresence((presence) => {
-                let newPresence: Record<string, WrappedPresenceMessage<T>> = {}
-                for (let client in presence) {
-                    if (Date.now() - presence[client].lastSeen < MAX_PRESENCE_INTERVAL * 2) {
-                        newPresence[client] = presence[client]
-                    }
-                }
-                return newPresence
-            })
-        }, MAX_PRESENCE_INTERVAL)
-
-        db.subscribe(key, callback)
-
-        return () => {
-            db.unsubscribe(key, callback)
-            clearInterval(interval)
-        }
-    }, [key])
-
     return presence
 }
 

@@ -78,7 +78,7 @@ export class LatencyTest {
 
 export class DbConnection {
     connection: WebSocket | null = null
-    status: ConnectionStatus = {connected: false}
+    status: ConnectionStatus = { connected: false }
     public statusListener = new EventListener<ConnectionStatus>()
     public messageListener = new EventListener<MessageFromDb>()
     subscriptions = new SubscriptionManager<SequenceValue>()
@@ -90,13 +90,13 @@ export class DbConnection {
 
     connect(dbUrl: string) {
         this.dbUrl = dbUrl
-        
+
         if (this.connection) {
             this.connection.close()
         }
 
         this.connection = new WebSocket(dbUrl)
-        
+
         this.connection.onopen = () => {
             if (this.reconnectLoopHandle) {
                 window.clearInterval(this.reconnectLoopHandle)
@@ -163,7 +163,7 @@ export class DbConnection {
 
         if (!this.activeLatencyTest) {
             this.activeLatencyTest = new LatencyTest()
-            this.send({type: 'ping'})
+            this.send({ type: 'ping' })
         }
 
         return this.activeLatencyTest.result()
@@ -182,7 +182,7 @@ export class DbConnection {
     }
 
     setStatus(connected: boolean) {
-        this.status = connected ? {connected: true, debugUrl: this.debugUrl()!} : {connected: false}
+        this.status = connected ? { connected: true, debugUrl: this.debugUrl()! } : { connected: false }
         this.statusListener.dispatch(this.status)
     }
 
@@ -200,7 +200,7 @@ export class DbConnection {
         if (sizeCallback) {
             this.sizeSubscriptions.subscribe(key, sizeCallback)
         }
-        this.send({type: 'get', key, seq: 0 })
+        this.send({ type: 'get', key, seq: 0 })
     }
 
     unsubscribe(subject: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
@@ -284,24 +284,81 @@ export type WrappedPresenceMessage<T> = {
     lastSeen: number
 }
 
-export const MIN_PRESENCE_INTERVAL = 100
+export const MIN_PRESENCE_INTERVAL = 20
 export const MAX_PRESENCE_INTERVAL = 1_000
 
+interface PresenceListenerOptions<T> {
+    initialState: T,
+    db: DbConnection,
+    clientId: string,
+    key?: string,
+    callback?: (presence: Record<string, WrappedPresenceMessage<T>>) => void,
+}
+
 export class PresenceListener<T> {
-    // Time of the last update caused by a state change (not regular interval).
+    private state: T
+    private key: string
+    private clientId: string
+    private db: DbConnection
+    private callback: (presence: Record<string, WrappedPresenceMessage<T>>) => void
+    private presence: Record<string, WrappedPresenceMessage<T>> = {}
+    private interval: ReturnType<typeof setInterval>
+
+    // Time of the last update caused by a state change.
     private lastUpdate = 0
-    
+
     // True if we have a pending update.
     private nextUpdate: number
 
     private updateHandle: ReturnType<typeof setTimeout>
 
-    constructor(private state: T, private db: DbConnection, private key: string, private clientId: string) {
+    constructor(options: PresenceListenerOptions<T>) {
         this.nextUpdate = Date.now()
 
-        this.updateHandle = setTimeout(() => {            
+        this.state = options.initialState
+        this.db = options.db
+        this.key = options.key ?? "__presence"
+        this.clientId = options.clientId
+        this.callback = options.callback ?? (() => { })
+
+        this.updateHandle = setTimeout(() => {
             this.update()
         }, 0)
+
+        this.onMessage = this.onMessage.bind(this)
+        this.db.subscribe(this.key, this.onMessage)
+
+        this.interval = setInterval(() => {
+            for (let client in this.presence) {
+                if (Date.now() - this.presence[client].lastSeen > MAX_PRESENCE_INTERVAL * 2) {
+                    delete this.presence[client]
+                }
+            }
+        }, MAX_PRESENCE_INTERVAL)
+    }
+
+    destroy() {
+        clearInterval(this.interval)
+        clearTimeout(this.updateHandle)
+        this.db.unsubscribe(this.key, this.onMessage)
+    }
+
+    private onMessage(event: SequenceValue) {
+        let message: PresenceMessage<T> = event.value as any
+        if (message.client === this.clientId) {
+            // Ignore our own messages.
+            return
+        }
+
+        this.presence = {
+            ...this.presence,
+            [message.client]: {
+                value: message.value,
+                lastSeen: Date.now()
+            }
+        }
+
+        this.callback(this.presence)
     }
 
     private update() {
@@ -316,7 +373,7 @@ export class PresenceListener<T> {
         this.lastUpdate = Date.now()
         this.updateHandle = setTimeout(() => {
             this.update()
-        }, MAX_PRESENCE_INTERVAL)        
+        }, MAX_PRESENCE_INTERVAL)
     }
 
     updateState(value: T) {
@@ -325,7 +382,7 @@ export class PresenceListener<T> {
         }
 
         this.state = value
-        
+
         const nextUpdate = this.lastUpdate + MIN_PRESENCE_INTERVAL
 
         if (nextUpdate < this.nextUpdate) {
