@@ -284,15 +284,14 @@ export type WrappedPresenceMessage<T> = {
     lastSeen: number
 }
 
-export const MIN_PRESENCE_INTERVAL = 20
-export const MAX_PRESENCE_INTERVAL = 1_000
-
 interface PresenceListenerOptions<T> {
     initialState: T,
     db: DbConnection,
     clientId: string,
     key?: string,
     callback?: (presence: Record<string, WrappedPresenceMessage<T>>) => void,
+    minPresenceInterval?: number,
+    maxPresenceInterval?: number,
 }
 
 export class PresenceListener<T> {
@@ -303,6 +302,8 @@ export class PresenceListener<T> {
     private callback: (presence: Record<string, WrappedPresenceMessage<T>>) => void
     private presence: Record<string, WrappedPresenceMessage<T>> = {}
     private interval: ReturnType<typeof setInterval>
+    private minPresenceInterval: number
+    private maxPresenceInterval: number
 
     // Time of the last update caused by a state change.
     private lastUpdate = 0
@@ -321,6 +322,9 @@ export class PresenceListener<T> {
         this.clientId = options.clientId
         this.callback = options.callback ?? (() => { })
 
+        this.minPresenceInterval = options.minPresenceInterval ?? 20 // 20 ms
+        this.maxPresenceInterval = options.maxPresenceInterval ?? 1_000 // 1 second
+
         this.updateHandle = setTimeout(() => {
             this.update()
         }, 0)
@@ -330,11 +334,11 @@ export class PresenceListener<T> {
 
         this.interval = setInterval(() => {
             for (let client in this.presence) {
-                if (Date.now() - this.presence[client].lastSeen > MAX_PRESENCE_INTERVAL * 2) {
+                if (Date.now() - this.presence[client].lastSeen > this.maxPresenceInterval * 2) {
                     delete this.presence[client]
                 }
             }
-        }, MAX_PRESENCE_INTERVAL)
+        }, this.maxPresenceInterval)
     }
 
     destroy() {
@@ -369,11 +373,11 @@ export class PresenceListener<T> {
             key: this.key
         })
 
-        this.nextUpdate = Date.now() + MAX_PRESENCE_INTERVAL
+        this.nextUpdate = Date.now() + this.maxPresenceInterval
         this.lastUpdate = Date.now()
         this.updateHandle = setTimeout(() => {
             this.update()
-        }, MAX_PRESENCE_INTERVAL)
+        }, this.maxPresenceInterval)
     }
 
     updateState(value: T) {
@@ -383,7 +387,7 @@ export class PresenceListener<T> {
 
         this.state = value
 
-        const nextUpdate = this.lastUpdate + MIN_PRESENCE_INTERVAL
+        const nextUpdate = this.lastUpdate + this.minPresenceInterval
 
         if (nextUpdate < this.nextUpdate) {
             this.nextUpdate = nextUpdate
