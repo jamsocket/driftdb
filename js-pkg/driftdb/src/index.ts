@@ -1,4 +1,10 @@
+import { LatencyTest } from "./latency"
 import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
+export { PresenceListener, WrappedPresenceMessage, PresenceMessage } from "./presence"
+export { StateListener } from "./state"
+export { Reducer } from "./reducer"
+
+const CLIENT_ID_KEY = "_driftdb_client_id"
 
 export class EventListener<T> {
     listeners: Array<(event: T) => void> = []
@@ -50,33 +56,9 @@ export class SubscriptionManager<T> {
     }
 }
 
-export class LatencyTest {
-    private startTime: number
-    private endTime: number | null = null
-    private signal: Promise<void>
-    private resolve!: () => void
-
-    constructor() {
-        this.startTime = performance.now()
-        this.signal = new Promise((resolve) => {
-            this.resolve = resolve
-        })
-    }
-
-    receivedResponse() {
-        this.endTime = performance.now()
-        this.resolve()
-    }
-
-    async result() {
-        await this.signal
-        return this.endTime! - this.startTime
-    }
-}
-
 export class DbConnection {
     connection: WebSocket | null = null
-    status: ConnectionStatus = {connected: false}
+    status: ConnectionStatus = { connected: false }
     public statusListener = new EventListener<ConnectionStatus>()
     public messageListener = new EventListener<MessageFromDb>()
     subscriptions = new SubscriptionManager<SequenceValue>()
@@ -88,13 +70,13 @@ export class DbConnection {
 
     connect(dbUrl: string) {
         this.dbUrl = dbUrl
-        
+
         if (this.connection) {
             this.connection.close()
         }
 
         this.connection = new WebSocket(dbUrl)
-        
+
         this.connection.onopen = () => {
             if (this.reconnectLoopHandle) {
                 window.clearInterval(this.reconnectLoopHandle)
@@ -161,7 +143,7 @@ export class DbConnection {
 
         if (!this.activeLatencyTest) {
             this.activeLatencyTest = new LatencyTest()
-            this.send({type: 'ping'})
+            this.send({ type: 'ping' })
         }
 
         return this.activeLatencyTest.result()
@@ -180,7 +162,7 @@ export class DbConnection {
     }
 
     setStatus(connected: boolean) {
-        this.status = connected ? {connected: true, debugUrl: this.debugUrl()!} : {connected: false}
+        this.status = connected ? { connected: true, debugUrl: this.debugUrl()! } : { connected: false }
         this.statusListener.dispatch(this.status)
     }
 
@@ -198,7 +180,7 @@ export class DbConnection {
         if (sizeCallback) {
             this.sizeSubscriptions.subscribe(key, sizeCallback)
         }
-        this.send({type: 'get', key, seq: 0 })
+        this.send({ type: 'get', key, seq: 0 })
     }
 
     unsubscribe(subject: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
@@ -206,5 +188,15 @@ export class DbConnection {
         if (sizeCallback) {
             this.sizeSubscriptions.unsubscribe(subject, sizeCallback)
         }
+    }
+}
+
+export function uniqueClientId(): string {
+    if (sessionStorage.getItem(CLIENT_ID_KEY)) {
+        return sessionStorage.getItem(CLIENT_ID_KEY)!
+    } else {
+        let clientId = crypto.randomUUID()
+        sessionStorage.setItem(CLIENT_ID_KEY, clientId)
+        return clientId
     }
 }

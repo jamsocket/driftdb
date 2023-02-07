@@ -74,11 +74,11 @@ export default function SliderDemo() {
 }
 ```
 
-All messages in DriftDB belong to a **room**, and have a **subject**. Rooms and subjects are both represented by strings. Rooms are represented by a unique generated string of characters. Subjects are chosen by the developer and usually have a meaning in the context of the application. In the example above, `slider` is the name of the subject used for synchronizing the state of the range slider input.
+All messages in DriftDB belong to a **room**, and have a **key**. Rooms and keys are both represented by strings. Rooms are represented by a unique generated string of characters. Subjects are chosen by the developer and usually have a meaning in the context of the application. In the example above, `slider` is the name of the key used for synchronizing the state of the range slider input.
 
 The room in the example above depends on whether the user visits the page directly or via a link that includes a room ID. If the user visits the page directly, a new room ID is generated and inserted into the URL. If another user opens the same URL, they will be connected to the same room, and instantly be sharing state. This is not behavior of DriftDB itself, but of the `DriftDBProvider` React component used as a client.
 
-A connection with the server is scoped to a **room**. Messages to multiple subjects (within the same room) are multiplexed over one connection.
+A connection with the server is scoped to a **room**. Messages to multiple keys (within the same room) are multiplexed over one connection.
 
 For more details on DriftDB-React, see [the React docs](/docs/react) or [this four-minute tutorial video](https://www.youtube.com/watch?v=ktb6HUZlyJs).
 
