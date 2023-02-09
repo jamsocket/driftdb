@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # API
 
-A DriftDB instance is represented by a URL that points to the root path to its API. For a Jamsocket.live instance, this looks like `https://api.jamsocket.live/db/<YOUR_ACCESS_KEY_HERE>`. For a local dev instance, it may be `http://localhost:8000`.
+A DriftDB instance is represented by a URL that points to the root path to its API. For a [Jamsocket.Live](https://jamsocket.live) instance, this looks like `https://api.jamsocket.live/db/<YOUR_ACCESS_KEY_HERE>`. For a local dev instance, it may be `http://localhost:8000`.
 
 All API endpoints below are relative to this root path.
 
