@@ -1,6 +1,6 @@
 import { LatencyTest } from "./latency"
 import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
-import { WebSocket } from "ws"
+import { WebSocket } from "isomorphic-ws"
 export { PresenceListener, WrappedPresenceMessage, PresenceMessage } from "./presence"
 export { StateListener } from "./state"
 export { Reducer } from "./reducer"
