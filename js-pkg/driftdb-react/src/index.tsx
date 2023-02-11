@@ -86,7 +86,7 @@ export function useUniqueClientId(): string {
     return currentId.current
 }
 
-export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: A) => T, initialValue: any = null, init: ((v: any) => T) = (a: any) => a): [T, (action: A) => void] {
+export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: A) => T, initialValue: any, init: ((v: any) => T) = (a: any) => a): [T, (action: A) => void] {
     const db = useDatabase();
 
     const initialStateRef = useRef<T>(null!)
