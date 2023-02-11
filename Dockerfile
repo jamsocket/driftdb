@@ -1,10 +1,12 @@
-FROM public.ecr.aws/t7o4u3y2/node-18.2.0:latest
+FROM node:16
 
 WORKDIR /work
 
 COPY . .
 
-RUN ./build_js.sh
+#RUN ./build_js.sh
+
+RUN npm install
 
 WORKDIR /work/js-pkg/demos
 
