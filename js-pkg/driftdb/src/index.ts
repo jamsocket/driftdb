@@ -1,5 +1,6 @@
 import { LatencyTest } from "./latency"
 import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
+import { WebSocket } from "ws"
 export { PresenceListener, WrappedPresenceMessage, PresenceMessage } from "./presence"
 export { StateListener } from "./state"
 export { Reducer } from "./reducer"
@@ -65,11 +66,18 @@ export class DbConnection {
     sizeSubscriptions = new SubscriptionManager<number>()
     private queue: Array<MessageToDb> = []
     private dbUrl: string | null = null
-    private reconnectLoopHandle: number | null = null
+    private reconnectLoopHandle: ReturnType<typeof setTimeout> | null = null
     private activeLatencyTest: LatencyTest | null = null
 
-    connect(dbUrl: string) {
+    connect(dbUrl: string): Promise<void> {
         this.dbUrl = dbUrl
+
+        var resolve: () => void
+        var reject: (err: any) => void
+        const promise = new Promise<void>((res, rej) => {
+            resolve = res
+            reject = rej
+        })
 
         if (this.connection) {
             this.connection.close()
@@ -79,7 +87,7 @@ export class DbConnection {
 
         this.connection.onopen = () => {
             if (this.reconnectLoopHandle) {
-                window.clearInterval(this.reconnectLoopHandle)
+                clearInterval(this.reconnectLoopHandle)
                 this.reconnectLoopHandle = null
             }
 
@@ -90,11 +98,13 @@ export class DbConnection {
             })
 
             this.queue = []
+            resolve()
         }
 
-        this.connection.onerror = (err: Event) => {
+        this.connection.onerror = (err: any) => {
             console.error("DriftDB connection error", err)
             this.setStatus(false)
+            reject(err)
         }
 
         this.connection.onclose = () => {
@@ -102,13 +112,13 @@ export class DbConnection {
 
             console.log("Connection closed, attempting to reconnect...")
 
-            this.reconnectLoopHandle = window.setTimeout(() => {
+            this.reconnectLoopHandle = setTimeout(() => {
                 this.connect(dbUrl)
             }, 1000)
         }
 
         this.connection.onmessage = (event) => {
-            const message: MessageFromDb = JSON.parse(event.data)
+            const message: MessageFromDb = JSON.parse(event.data as string)
             this.messageListener.dispatch(message)
 
             switch (message.type) {
@@ -134,6 +144,8 @@ export class DbConnection {
                     break
             }
         }
+
+        return promise
     }
 
     public testLatency(): Promise<number> | null {
@@ -157,6 +169,7 @@ export class DbConnection {
     }
 
     disconnect() {
+        this.connection!.onclose = null
         console.log('disconnecting')
         this.connection?.close()
     }
