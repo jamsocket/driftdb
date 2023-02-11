@@ -2,7 +2,7 @@ use crate::Opts;
 use anyhow::Result;
 use axum::{
     body::BoxBody,
-    extract::{ws::WebSocket, Path, Query, State, WebSocketUpgrade},
+    extract::{ws::WebSocket, Path, Query, State, WebSocketUpgrade, Host},
     response::Response,
     routing::{get, post},
     Json, Router,
@@ -155,19 +155,12 @@ async fn connection(
     ws.on_upgrade(move |socket| handle_socket(socket, database, query.debug))
 }
 
-async fn new_room(State(room_map): State<Arc<RoomMap>>) -> Json<RoomResult> {
+async fn new_room(Host(hostname): Host, State(room_map): State<Arc<RoomMap>>) -> Json<RoomResult> {
     let room = Uuid::new_v4().to_string();
     let database = Arc::new(Database::new());
     room_map.insert(room.clone(), database);
 
-    let socket_url = format!("ws://localhost:8080/room/{}/connect", room);
-    let http_url = format!("http://localhost:8080/room/{}/send", room);
-
-    let result = RoomResult {
-        room,
-        socket_url,
-        http_url,
-    };
+    let result = RoomResult::new(room, &hostname);
 
     Json(result)
 }
@@ -175,17 +168,11 @@ async fn new_room(State(room_map): State<Arc<RoomMap>>) -> Json<RoomResult> {
 async fn room(
     Path(room_id): Path<String>,
     State(room_map): State<Arc<RoomMap>>,
+    Host(hostname): Host,
 ) -> std::result::Result<Json<RoomResult>, StatusCode> {
     let _ = room_map.get(&room_id).ok_or(StatusCode::NOT_FOUND)?;
 
-    let socket_url = format!("ws://localhost:8080/room/{}/connect", room_id);
-    let http_url = format!("http://localhost:8080/room/{}/send", room_id);
-
-    let result = RoomResult {
-        room: room_id,
-        socket_url,
-        http_url,
-    };
+    let result = RoomResult::new(room_id, &hostname);
 
     Ok(Json(result))
 }
@@ -195,6 +182,19 @@ struct RoomResult {
     room: String,
     socket_url: String,
     http_url: String,
+}
+
+impl RoomResult {
+    fn new(room: String, hostname: &str) -> Self {
+        let socket_url = format!("ws://{}/room/{}/connect", hostname, room);
+        let http_url = format!("http://{}/room/{}/send", hostname, room);
+
+        Self {
+            room,
+            socket_url,
+            http_url,
+        }
+    }
 }
 
 pub fn api_routes() -> Result<Router> {
