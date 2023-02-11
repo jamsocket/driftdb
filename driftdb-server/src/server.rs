@@ -1,14 +1,15 @@
+use crate::Opts;
 use anyhow::Result;
 use axum::{
     body::BoxBody,
-    extract::{ws::WebSocket, Query, State, WebSocketUpgrade},
+    extract::{ws::WebSocket, Path, Query, State, WebSocketUpgrade},
     response::Response,
-    routing::get,
-    Router,
+    routing::{get, post},
+    Json, Router,
 };
 use dashmap::DashMap;
 use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
-use hyper::Method;
+use hyper::{Method, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::{
@@ -16,8 +17,7 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
-
-use crate::Opts;
+use uuid::Uuid;
 
 struct TypedWebSocket<Inbound: DeserializeOwned, Outbound: Serialize> {
     socket: WebSocket,
@@ -142,11 +142,52 @@ struct ConnectionQuery {
 type RoomMap = DashMap<String, Arc<Database>>;
 
 async fn connection(
+    Path(room_id): Path<String>,
     ws: WebSocketUpgrade,
     State(room_map): State<Arc<RoomMap>>,
     Query(query): Query<ConnectionQuery>,
 ) -> Response<BoxBody> {
-    ws.on_upgrade(move |socket| handle_socket(socket, room_map, query.debug))
+    let database = room_map
+        .get(&room_id)
+        .expect("Room should have been created before connection.")
+        .clone();
+
+    ws.on_upgrade(move |socket| handle_socket(socket, database, query.debug))
+}
+
+async fn new_room(State(room_map): State<Arc<RoomMap>>) -> Json<RoomResult> {
+    let room = Uuid::new_v4().to_string();
+    let database = Arc::new(Database::new());
+    room_map.insert(room.clone(), database);
+
+    let socket_url = format!("ws://localhost:8080/room/{}/connect", room);
+    let http_url = format!("http://localhost:8080/room/{}/send", room);
+
+    let result = RoomResult {
+        room,
+        socket_url,
+        http_url,
+    };
+
+    Json(result)
+}
+
+async fn room(
+    Path(room_id): Path<String>,
+    State(room_map): State<Arc<RoomMap>>,
+) -> std::result::Result<Json<RoomResult>, StatusCode> {
+    let _ = room_map.get(&room_id).ok_or(StatusCode::NOT_FOUND)?;
+
+    let socket_url = format!("ws://localhost:8080/room/{}/connect", room_id);
+    let http_url = format!("http://localhost:8080/room/{}/send", room_id);
+
+    let result = RoomResult {
+        room: room_id,
+        socket_url,
+        http_url,
+    };
+
+    Ok(Json(result))
 }
 
 #[derive(Serialize)]
@@ -164,7 +205,9 @@ pub fn api_routes() -> Result<Router> {
     let room_map = RoomMap::new();
 
     Ok(Router::new()
-        .route("/ws", get(connection))
+        .route("/new", post(new_room))
+        .route("/room/:room_id/connect", get(connection))
+        .route("/room/:room_id", get(room))
         .layer(cors)
         .with_state(Arc::new(room_map)))
 }
