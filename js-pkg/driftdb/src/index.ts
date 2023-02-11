@@ -170,7 +170,11 @@ export class DbConnection {
 
     disconnect() {
         this.connection!.onclose = null
-        console.log('disconnecting')
+        this.connection!.onerror = null
+        this.connection!.onmessage = null
+        this.connection!.onopen = null
+        this.subscriptions = new SubscriptionManager()
+        this.sizeSubscriptions = new SubscriptionManager()
         this.connection?.close()
     }
 
