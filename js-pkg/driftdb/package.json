@@ -22,6 +22,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "net": "^1.0.2",
     "ws": "^8.12.0"
   }
 }
