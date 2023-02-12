@@ -23,16 +23,18 @@ type ActionType = {
     type: 'reset'
 }
 
+const INITIAL_STATE: GameState = {
+    board: Array(9).fill(null),
+    xIsNext: true,
+    xPlayer: null,
+    oPlayer: null,
+    winner: null,
+}
+
 function ticTacToeReducer(state: GameState, action: ActionType): GameState {
     switch (action.type) {
         case 'reset':
-            return {
-                board: Array(9).fill(null),
-                xIsNext: true,
-                xPlayer: null,
-                oPlayer: null,
-                winner: null,
-            }
+            return structuredClone(INITIAL_STATE)
         case 'move':
             if (state.xIsNext) {
                 if (state.xPlayer === null) {
@@ -98,19 +100,13 @@ function gameStateDescription(state: GameState) {
 }
 
 function Square({ value, onClick, disabled }: { value: number, onClick: () => void, disabled: boolean }) {
-    return <button className="square" onClick={onClick} disabled={disabled} style={{width: 30, height: 30, background: "none", border: "1px solid #aaa", borderRadius: 3}}>
+    return <button className="square" onClick={onClick} disabled={disabled} style={{ width: 30, height: 30, background: "none", border: "1px solid #aaa", borderRadius: 3 }}>
         {value === Player.X ? 'X' : value === Player.O ? 'O' : '_'}
     </button>
 }
 
 function TicTacToeDemo() {
-    const [state, dispatch] = useSharedReducer("tictactoe", ticTacToeReducer, {
-        board: Array(9).fill(null),
-        xIsNext: true,
-        xPlayer: null,
-        oPlayer: null,
-        winner: null,
-    })
+    const [state, dispatch] = useSharedReducer("tictactoe", ticTacToeReducer, null, () => structuredClone(INITIAL_STATE))
 
     const playerId = useUniqueClientId()
 
@@ -135,7 +131,7 @@ function TicTacToeDemo() {
             <h2>Game</h2>
 
             <p>{gameStateDescription(state)}</p>
-            
+
             <div>
                 <div>
                     <Square value={state.board[0]} onClick={() => playMove(0)} disabled={state.winner !== null} />
