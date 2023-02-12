@@ -5,6 +5,7 @@ export class StateListener<T> {
     lastUpdateSent: number = 0
     lastValue: T | null = null
     debounceTimeout: number | null = null
+    state: T | null = null
 
     constructor(
         private callback: (value: T) => void,
@@ -23,6 +24,7 @@ export class StateListener<T> {
 
     onMessage(value: SequenceValue) {
         this.callback(value.value as T)
+        this.state = value.value as T
     }
 
     sendUpdate() {

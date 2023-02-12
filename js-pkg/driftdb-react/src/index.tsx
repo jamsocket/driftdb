@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { DbConnection, PresenceListener, Reducer, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb"
 import { Api, RoomResult } from "driftdb/dist/api"
 import { ConnectionStatus } from "driftdb/dist/types";
@@ -49,16 +49,28 @@ export function RoomQRCode() {
     }
 }
 
-export function useSharedState<T>(key: string, initialValue: T): [T, (value: T) => void] {
-    const db = useDatabase();
-    const [state, setState] = React.useState<T>(initialValue);
+type SetterFunction<T> = (value: T | ((v: T) => T)) => void;
 
-    let stateListener = useRef<StateListener<T>>(null)
+export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunction<T>] {
+    const db = useDatabase();
+    const [state, setInnerState] = React.useState<T>(initialValue);
+
+    const stateListener = useRef<StateListener<T>>(null)
     if (stateListener.current === null) {
-        (stateListener as any).current = new StateListener(setState, db, key)
+        (stateListener as any).current = new StateListener(setInnerState, db, key)
     }
 
-    return [state, stateListener.current!.setStateOptimistic];
+    const setState = useCallback((value: T | ((v: T) => T)) => {
+        if (typeof value === "function") {
+            const currentValue = stateListener.current!.state ?? initialValue;
+            const newValue = (value as any)(currentValue);
+            stateListener.current!.setStateOptimistic(newValue);
+        } else {
+            stateListener.current!.setStateOptimistic(value);
+        }
+    }, [initialValue])
+
+    return [state, setState];
 }
 
 export function useUniqueClientId(): string {
@@ -74,17 +86,23 @@ export function useUniqueClientId(): string {
     return currentId.current
 }
 
-export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: A) => T, initialValue: T, sizeThreshold?: number): [T, (action: A) => void] {
+export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: A) => T, initialValue: any, init: ((v: any) => T) = (a: any) => a): [T, (action: A) => void] {
     const db = useDatabase();
-    const [state, setState] = React.useState<T>(structuredClone(initialValue));
+
+    const initialStateRef = useRef<T>(null!)
+    if (initialStateRef.current === null) {
+        initialStateRef.current = structuredClone(init(initialValue))
+    }
+
+    const [state, setState] = React.useState<T>(initialStateRef.current);
 
     const reducerRef = React.useRef<Reducer<T, A> | null>(null)
     if (reducerRef.current === null) {
         reducerRef.current = new Reducer({
             key,
             reducer,
-            initialValue,
-            sizeThreshold,
+            initialValue: initialStateRef.current,
+            sizeThreshold: 30,
             db,
             callback: setState
         })

@@ -59,6 +59,8 @@ function MyComponent() {
 
 `useSharedState` is debounced on the client side, meaning that if you make calls to it in rapid succession, it will wait for a short period and send only the last value to the server. `useSharedState` is optimistic, so calls to `setValue` will be reflected locally before they are confirmed by the server.
 
+Like React's `useState`, the setter function returned by `useSharedState` can itself take a function as an argument. This function will be called with the current value of the state, and the value it returns will become the new state.
+
 ## `useSharedReducer` hook
 
 There are two major limitations to `useSharedState`:

@@ -80,7 +80,7 @@ function VoxelSet(props: VoxelSetProps) {
 
 export function VoxelEditor() {
     const [ghostPosition, setGhostPosition] = useState<[number, number, number] | null>(null)
-    const [voxels, dispatch] = useSharedReducer("voxels", voxelReducer, [] as any)
+    const [voxels, dispatch] = useSharedReducer("voxels", voxelReducer, null, () => ({}))
     const [color, setColor] = useState('#D33115')
     
     const positionHasBeenSet = useRef(false)
