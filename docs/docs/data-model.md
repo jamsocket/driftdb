@@ -68,7 +68,7 @@ The `append` action results in a message being broadcast, and added to the repla
 
 ### `relay`
 
-The `relay` action results in a message being broadcast, but not added to the replay stream for its key. `relay` messages are still treated as part of the ordered
+The `relay` action results in a message being broadcast, but not added to the replayable stream for its key. `relay` messages are still treated as part of the ordered
 broadcast and given a unique sequence number, but are discarded immediately by DriftDB immediately after they are broadcast.
 
 ### `replace`
@@ -79,9 +79,9 @@ key-value semantics, where only the last value set for a given key is retained.
 ### `compact`
 
 Unlike the other actions, `compact` must be accompanied by a sequence number. Also unlike the other actions, the compact action
-*does not* broadcast the message. Instead, it deletes all messages from the replay stream of the given key, up to and including the given sequence number.
+*does not* broadcast the message. Instead, it deletes all messages from the replayable stream of the given key, up to and including the given sequence number.
 
-`compact` then inserts the accompanying message at the *bacK* of the replay stream for the given key, with the sequence number provided.
+`compact` then inserts the accompanying message as the first element in the replayable stream for the given key, with the sequence number provided.
 
 
 
