@@ -1,10 +1,21 @@
 use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+mod key_seq_pair;
+
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Default, Deserialize, Hash)]
 pub struct Key(String);
+
+impl Key {
+    pub fn new(s: String) -> Self {
+        Key(s)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 
 impl From<&str> for Key {
     fn from(s: &str) -> Self {

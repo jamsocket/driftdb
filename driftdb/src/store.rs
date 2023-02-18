@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Default)]
-struct ValueLog {
+pub struct ValueLog {
     values: VecDeque<SequenceValue>,
 }
 
@@ -55,6 +55,13 @@ impl ApplyResult {
 }
 
 impl Store {
+    pub fn new(subjects: HashMap<Key, ValueLog>, sequence_number: SequenceNumber) -> Self {
+        Self {
+            subjects,
+            sequence_number,
+        }
+    }
+
     fn next_seq(&mut self) -> SequenceNumber {
         self.sequence_number.0 += 1;
         self.sequence_number

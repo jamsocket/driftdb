@@ -5,12 +5,15 @@ use driftdb::{
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
 use tokio_stream::StreamExt;
-use worker::{Router, WebsocketEvent, ListOptions};
+use worker::{Router, WebsocketEvent, ListOptions, console_log};
 use worker::{
-    durable_object, event, Cors, Env, Method, Request, Response, Result, RouteContext, State,
+    durable_object, event, Cors, Env, Method, Request, Response, Result, RouteContext,
     WebSocket, WebSocketPair, wasm_bindgen, wasm_bindgen_futures, async_trait, worker_sys, js_sys,
 };
+use crate::state::PersistedDb;
+
 mod utils;
+mod state;
 
 pub fn cors() -> Cors {
     Cors::new()
@@ -102,15 +105,6 @@ struct WrappedWebSocket(WebSocket);
 unsafe impl Send for WrappedWebSocket {}
 unsafe impl Sync for WrappedWebSocket {}
 
-struct WrappedState(State);
-unsafe impl Send for WrappedState {}
-unsafe impl Sync for WrappedState {}
-
-#[cfg(all(not(target_arch = "wasm32"), not(debug_assertions)))]
-compile_error!(
-    "driftdb-worker should only be compiled to WebAssembly. Use driftdb-server for other targets."
-);
-
 impl DbRoom {
     async fn connect(&mut self, req: Request) -> Result<Response> {
         let WebSocketPair { client, server } = WebSocketPair::new()?;
@@ -180,11 +174,20 @@ impl DbRoom {
 #[durable_object]
 impl DurableObject for DbRoom {
     fn new(state: State, _: Env) -> Self {
+        let state = PersistedDb(state);
+        // let result = state.load_store();
+        
+        // let mut db = match result {
+        //     Ok(store) => Database::new_from_store(store),
+        //     Err(e) => {
+        //         console_log!("Error loading store: {}", e);
+        //         Database::new()
+        //     }
+        // };
+
         let mut db = Database::new();
 
         {
-            let state = WrappedState(state);
-
             db.set_replica_callback(move |apply_result: &ApplyResult| {
                 let mut storage = state.0.storage();
                 let apply_result = apply_result.clone();

@@ -110,6 +110,15 @@ impl Database {
         Self::default()
     }
 
+    pub fn new_from_store(store: Store) -> Database {
+        Database {
+            inner: Arc::new(Mutex::new(DatabaseInner {
+                store,
+                ..Default::default()
+            })),
+        }
+    }
+
     pub fn set_replica_callback<F>(&mut self, callback: F)
     where
         F: Fn(&ApplyResult) + 'static + Send + Sync,
