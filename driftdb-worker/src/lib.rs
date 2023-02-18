@@ -1,9 +1,15 @@
-use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
+use driftdb::{
+    ApplyResult, Database, DeleteInstruction, MessageFromDatabase, MessageToDatabase,
+    PushInstruction,
+};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
 use tokio_stream::StreamExt;
-use worker::*;
-
+use worker::{Router, WebsocketEvent, ListOptions};
+use worker::{
+    durable_object, event, Cors, Env, Method, Request, Response, Result, RouteContext, State,
+    WebSocket, WebSocketPair, wasm_bindgen, wasm_bindgen_futures, async_trait, worker_sys, js_sys,
+};
 mod utils;
 
 pub fn cors() -> Cors {
@@ -86,8 +92,6 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
 #[durable_object]
 pub struct DbRoom {
-    #[allow(unused)]
-    state: State,
     db: Database,
 }
 
@@ -97,6 +101,10 @@ pub struct DbRoom {
 struct WrappedWebSocket(WebSocket);
 unsafe impl Send for WrappedWebSocket {}
 unsafe impl Sync for WrappedWebSocket {}
+
+struct WrappedState(State);
+unsafe impl Send for WrappedState {}
+unsafe impl Sync for WrappedState {}
 
 #[cfg(all(not(target_arch = "wasm32"), not(debug_assertions)))]
 compile_error!(
@@ -172,10 +180,77 @@ impl DbRoom {
 #[durable_object]
 impl DurableObject for DbRoom {
     fn new(state: State, _: Env) -> Self {
-        Self {
-            state,
-            db: Database::new(),
+        let mut db = Database::new();
+
+        {
+            let state = WrappedState(state);
+
+            db.set_replica_callback(move |apply_result: &ApplyResult| {
+                let mut storage = state.0.storage();
+                let apply_result = apply_result.clone();
+
+                wasm_bindgen_futures::spawn_local(async move {
+                    if let Some(delete_instruction) = &apply_result.delete_instruction {
+                        match delete_instruction {
+                            DeleteInstruction::Delete => {
+                                let prefix = format!("{}|", apply_result.key);
+                                let list_options = ListOptions::new().prefix(&prefix);
+
+                                let result = storage.list_with_options(list_options).await;
+
+                                if let Ok(keys) = result {
+                                    let keys: Vec<String> = keys
+                                        .keys()
+                                        .into_iter()
+                                        .map(|d| d.unwrap().as_string().unwrap())
+                                        .collect();
+                                    storage
+                                        .delete_multiple(keys)
+                                        .await
+                                        .expect("Error deleting keys.");
+                                }
+                            }
+                            DeleteInstruction::DeleteUpTo(seq) => {
+                                let prefix = format!("{}|", apply_result.key);
+                                let end = format!("{}|{}", apply_result.key, seq.next());
+                                let list_options = ListOptions::new().prefix(&prefix).end(&end);
+                                let result = storage.list_with_options(list_options).await;
+
+                                if let Ok(keys) = result {
+                                    let keys: Vec<String> = keys
+                                        .keys()
+                                        .into_iter()
+                                        .map(|d| d.unwrap().as_string().unwrap())
+                                        .collect();
+                                    storage
+                                        .delete_multiple(keys)
+                                        .await
+                                        .expect("Error deleting keys.");
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(push_instruction) = &apply_result.push_instruction {
+                        let sequence_value = match push_instruction {
+                            PushInstruction::Push(sequence_value) => sequence_value,
+                            PushInstruction::PushStart(sequence_value) => sequence_value,
+                        };
+
+                        let storage_key = format!("{}|{}", apply_result.key, sequence_value.seq);
+
+                        let storage_value = serde_json::to_string(&sequence_value.value).unwrap();
+
+                        storage
+                            .put(&storage_key, &storage_value)
+                            .await
+                            .expect("Error putting value in storage.");
+                    }
+                });
+            });
         }
+
+        Self { db }
     }
 
     async fn fetch(&mut self, mut req: Request) -> Result<Response> {

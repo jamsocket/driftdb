@@ -1,6 +1,6 @@
 use crate::{
     connection::Connection,
-    store::Store,
+    store::{Store, ApplyResult},
     types::{MessageFromDatabase, MessageToDatabase, SequenceNumber},
 };
 use std::sync::{Arc, Mutex, Weak};
@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex, Weak};
 pub struct DatabaseInner {
     connections: Vec<Weak<Connection>>,
     debug_connections: Vec<Weak<Connection>>,
+    replica_callback: Option<Arc<Box<dyn Fn(&ApplyResult) + Send + Sync>>>,
     store: Store,
 }
 
@@ -52,6 +53,12 @@ impl DatabaseInner {
                     }
                 }
 
+                if result.mutates() {
+                    if let Some(replica_callback) = &self.replica_callback {
+                        (replica_callback)(&result);
+                    }
+                }
+
                 if let Some(seq_value) = result.broadcast {
                     let message = MessageFromDatabase::Push {
                         key: key.clone(),
@@ -68,10 +75,10 @@ impl DatabaseInner {
                     });
                 }
 
-                if result.subject_size > 1 {
+                if result.stream_size > 1 {
                     let message = MessageFromDatabase::StreamSize {
                         key: key.clone(),
-                        size: result.subject_size,
+                        size: result.stream_size,
                     };
                     return Some(message);
                 }
@@ -101,6 +108,13 @@ pub struct Database {
 impl Database {
     pub fn new() -> Database {
         Self::default()
+    }
+
+    pub fn set_replica_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&ApplyResult) + 'static + Send + Sync,
+    {
+        self.inner.lock().unwrap().replica_callback = Some(Arc::new(Box::new(callback)));
     }
 
     pub fn send_message(&self, message: &MessageToDatabase) -> Option<MessageFromDatabase> {

@@ -8,3 +8,4 @@ mod types;
 
 pub use db::Database;
 pub use types::{Key, MessageFromDatabase, MessageToDatabase};
+pub use store::{Store, ApplyResult, PushInstruction, DeleteInstruction};
