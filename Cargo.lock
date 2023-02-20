@@ -266,7 +266,7 @@ dependencies = [
 
 [[package]]
 name = "driftdb"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -274,7 +274,7 @@ dependencies = [
 
 [[package]]
 name = "driftdb-server"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -293,7 +293,7 @@ dependencies = [
 
 [[package]]
 name = "driftdb-worker"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cfg-if 0.1.10",
  "console_error_panic_hook",
