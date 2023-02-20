@@ -1,3 +1,4 @@
+use driftdb::types::key_seq_pair::KeyAndSeq;
 use driftdb::{
     ApplyResult, Database, DeleteInstruction, MessageFromDatabase, MessageToDatabase,
     PushInstruction,
@@ -5,15 +6,16 @@ use driftdb::{
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
 use tokio_stream::StreamExt;
-use worker::{Router, WebsocketEvent, ListOptions, console_log};
 use worker::{
-    durable_object, event, Cors, Env, Method, Request, Response, Result, RouteContext,
-    WebSocket, WebSocketPair, wasm_bindgen, wasm_bindgen_futures, async_trait, worker_sys, js_sys,
+    async_trait, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures, worker_sys,
+    Cors, Env, Method, Request, Response, Result, RouteContext, WebSocket, WebSocketPair, State, console_log,
 };
+use worker::{ListOptions, Router, WebsocketEvent};
+
 use crate::state::PersistedDb;
 
-mod utils;
 mod state;
+mod utils;
 
 pub fn cors() -> Cors {
     Cors::new()
@@ -95,7 +97,8 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
 #[durable_object]
 pub struct DbRoom {
-    db: Database,
+    state: Option<State>,
+    db: Option<Database>,
 }
 
 /// A raw WebSocket is not Send or Sync, but that doesn't matter because we are compiling
@@ -106,11 +109,100 @@ unsafe impl Send for WrappedWebSocket {}
 unsafe impl Sync for WrappedWebSocket {}
 
 impl DbRoom {
+    async fn get_db(&mut self) -> Result<Database> {
+        if let Some(db) = &self.db {
+            return Ok(db.clone());
+        }
+        let state = self.state.take().expect("Exactly one of db or state should not be None.");
+        let state = PersistedDb(state);
+        let result = state.load_store().await;
+
+        let mut db = match result {
+            Ok(store) => Database::new_from_store(store),
+            Err(e) => {
+                console_log!("Error loading store: {}", e);
+                Database::new()
+            }
+        };
+
+        {
+            db.set_replica_callback(move |apply_result: &ApplyResult| {
+                let mut storage = state.0.storage();
+                let apply_result = apply_result.clone();
+
+                wasm_bindgen_futures::spawn_local(async move {
+                    if let Some(delete_instruction) = &apply_result.delete_instruction {
+                        match delete_instruction {
+                            DeleteInstruction::Delete => {
+                                let prefix = KeyAndSeq::prefix_str(&apply_result.key);
+                                let list_options = ListOptions::new().prefix(&prefix);
+
+                                let result = storage.list_with_options(list_options).await;
+
+                                if let Ok(keys) = result {
+                                    let keys: Vec<String> = keys
+                                        .keys()
+                                        .into_iter()
+                                        .map(|d| d.unwrap().as_string().unwrap())
+                                        .collect();
+                                    storage
+                                        .delete_multiple(keys)
+                                        .await
+                                        .expect("Error deleting keys.");
+                                }
+                            }
+                            DeleteInstruction::DeleteUpTo(seq) => {
+                                let prefix = KeyAndSeq::prefix_str(&apply_result.key);
+                                let end = KeyAndSeq::new(apply_result.key.clone(), seq.next()).to_string();
+                                let list_options = ListOptions::new().prefix(&prefix).end(&end);
+                                let result = storage.list_with_options(list_options).await;
+
+                                if let Ok(keys) = result {
+                                    let keys: Vec<String> = keys
+                                        .keys()
+                                        .into_iter()
+                                        .map(|d| d.unwrap().as_string().unwrap())
+                                        .collect();
+                                    storage
+                                        .delete_multiple(keys)
+                                        .await
+                                        .expect("Error deleting keys.");
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(push_instruction) = &apply_result.push_instruction {
+                        let sequence_value = match push_instruction {
+                            PushInstruction::Push(sequence_value) => sequence_value,
+                            PushInstruction::PushStart(sequence_value) => sequence_value,
+                        };
+
+                        let storage_key = KeyAndSeq::new(
+                            apply_result.key.clone(),
+                            sequence_value.seq,
+                        ).to_string();
+
+                        let storage_value = serde_json::to_string(&sequence_value.value).unwrap();
+
+                        storage
+                            .put(&storage_key, &storage_value)
+                            .await
+                            .expect("Error putting value in storage.");
+                    }
+                });
+            });
+        }
+
+        self.db = Some(db);
+        Ok(self.db.clone().unwrap())
+    }
+
     async fn connect(&mut self, req: Request) -> Result<Response> {
         let WebSocketPair { client, server } = WebSocketPair::new()?;
         server.accept()?;
 
-        let db = self.db.clone();
+        let db = self.get_db().await?;
 
         let url = req.url()?;
 
@@ -174,86 +266,10 @@ impl DbRoom {
 #[durable_object]
 impl DurableObject for DbRoom {
     fn new(state: State, _: Env) -> Self {
-        let state = PersistedDb(state);
-        // let result = state.load_store();
-        
-        // let mut db = match result {
-        //     Ok(store) => Database::new_from_store(store),
-        //     Err(e) => {
-        //         console_log!("Error loading store: {}", e);
-        //         Database::new()
-        //     }
-        // };
-
-        let mut db = Database::new();
-
-        {
-            db.set_replica_callback(move |apply_result: &ApplyResult| {
-                let mut storage = state.0.storage();
-                let apply_result = apply_result.clone();
-
-                wasm_bindgen_futures::spawn_local(async move {
-                    if let Some(delete_instruction) = &apply_result.delete_instruction {
-                        match delete_instruction {
-                            DeleteInstruction::Delete => {
-                                let prefix = format!("{}|", apply_result.key);
-                                let list_options = ListOptions::new().prefix(&prefix);
-
-                                let result = storage.list_with_options(list_options).await;
-
-                                if let Ok(keys) = result {
-                                    let keys: Vec<String> = keys
-                                        .keys()
-                                        .into_iter()
-                                        .map(|d| d.unwrap().as_string().unwrap())
-                                        .collect();
-                                    storage
-                                        .delete_multiple(keys)
-                                        .await
-                                        .expect("Error deleting keys.");
-                                }
-                            }
-                            DeleteInstruction::DeleteUpTo(seq) => {
-                                let prefix = format!("{}|", apply_result.key);
-                                let end = format!("{}|{}", apply_result.key, seq.next());
-                                let list_options = ListOptions::new().prefix(&prefix).end(&end);
-                                let result = storage.list_with_options(list_options).await;
-
-                                if let Ok(keys) = result {
-                                    let keys: Vec<String> = keys
-                                        .keys()
-                                        .into_iter()
-                                        .map(|d| d.unwrap().as_string().unwrap())
-                                        .collect();
-                                    storage
-                                        .delete_multiple(keys)
-                                        .await
-                                        .expect("Error deleting keys.");
-                                }
-                            }
-                        }
-                    }
-
-                    if let Some(push_instruction) = &apply_result.push_instruction {
-                        let sequence_value = match push_instruction {
-                            PushInstruction::Push(sequence_value) => sequence_value,
-                            PushInstruction::PushStart(sequence_value) => sequence_value,
-                        };
-
-                        let storage_key = format!("{}|{}", apply_result.key, sequence_value.seq);
-
-                        let storage_value = serde_json::to_string(&sequence_value.value).unwrap();
-
-                        storage
-                            .put(&storage_key, &storage_value)
-                            .await
-                            .expect("Error putting value in storage.");
-                    }
-                });
-            });
+        Self {
+            state: Some(state),
+            db: None,
         }
-
-        Self { db }
     }
 
     async fn fetch(&mut self, mut req: Request) -> Result<Response> {
@@ -263,8 +279,9 @@ impl DurableObject for DbRoom {
         match (method, path) {
             (Method::Get, "connect") => self.connect(req).await,
             (Method::Post, "send") => {
+                let db = self.get_db().await?;
                 let message: MessageToDatabase = req.json().await?;
-                let response = self.db.send_message(&message);
+                let response = db.send_message(&message);
                 Response::from_json(&response)
             }
             _ => Response::error("Room command not found", 404),

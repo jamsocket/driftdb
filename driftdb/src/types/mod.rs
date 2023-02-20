@@ -1,8 +1,8 @@
-use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::fmt::Display;
 
-mod key_seq_pair;
+pub mod key_seq_pair;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Default, Deserialize, Hash)]
 pub struct Key(String);
@@ -29,7 +29,7 @@ impl Display for Key {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default, PartialOrd, Ord, Hash)]
 pub struct SequenceNumber(pub u64);
 
 impl SequenceNumber {
@@ -83,7 +83,7 @@ pub enum MessageToDatabase {
     },
     Ping {
         nonce: Option<u64>,
-    }
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
@@ -113,5 +113,5 @@ pub enum MessageFromDatabase {
     },
     Pong {
         nonce: Option<u64>,
-    }
+    },
 }

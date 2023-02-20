@@ -1,6 +1,6 @@
 use crate::{
     connection::Connection,
-    store::{Store, ApplyResult},
+    store::{ApplyResult, Store},
     types::{MessageFromDatabase, MessageToDatabase, SequenceNumber},
 };
 use std::sync::{Arc, Mutex, Weak};
@@ -153,10 +153,7 @@ impl Database {
         let mut db = self.inner.lock().unwrap();
 
         for (key, values) in db.store.dump() {
-            let message = MessageFromDatabase::Init {
-                data: values,
-                key,
-            };
+            let message = MessageFromDatabase::Init { data: values, key };
             (conn.callback)(&message);
         }
 

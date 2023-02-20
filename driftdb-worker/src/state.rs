@@ -1,8 +1,11 @@
-use std::collections::HashMap;
-use driftdb::{Store, Key, ValueLog};
+use driftdb::{
+    types::{key_seq_pair::KeyAndSeq, SequenceNumber, SequenceValue},
+    Key, Store, ValueLog,
+};
 use gloo_utils::format::JsValueSerdeExt;
 use serde_json::Value;
-use worker::{State, Result};
+use std::{collections::HashMap, str::FromStr};
+use worker::{Result, State};
 
 pub struct PersistedDb(pub State);
 unsafe impl Send for PersistedDb {}
@@ -20,28 +23,27 @@ impl PersistedDb {
 
     pub async fn load_store(&self) -> Result<Store> {
         let storage = self.0.storage();
-        let subjects = HashMap::<Key, ValueLog>::new();
-
+        let mut subjects = HashMap::<Key, ValueLog>::new();
         let data = storage.list().await?;
+
+        let mut max_seq = 0;
 
         for kv in data.entries() {
             let kv = kv?;
-            let (key, value): (Key, Value) = JsValueSerdeExt::into_serde(&kv)?;
+            let (key, value): (String, Value) = JsValueSerdeExt::into_serde(&kv)?;
+            let key_and_seq = KeyAndSeq::from_str(&key)?;
+            max_seq = max_seq.max(key_and_seq.seq.0);
 
-
-            // let value = storage.get(&key).await?;
-            // let value = String::from_utf8(value)?;
-            // let key_and_seq = KeyAndSeq::from_str(&key)?;
-            // let value = Value::from_str(&value)?;
-
-            // subjects
-            //     .entry(key_and_seq.key)
-            //     .or_insert_with(ValueLog::new)
-            //     .values
-            //     .push(SequenceValue { value, seq: key_and_seq.seq });
+            subjects
+                .entry(key_and_seq.key)
+                .or_insert_with(ValueLog::default)
+                .values
+                .push_back(SequenceValue {
+                    value,
+                    seq: key_and_seq.seq,
+                });
         }
 
-
-        todo!()
+        Ok(Store::new(subjects, SequenceNumber(max_seq)))
     }
 }

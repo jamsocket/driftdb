@@ -4,7 +4,7 @@ use std::collections::{HashMap, VecDeque};
 
 #[derive(Default)]
 pub struct ValueLog {
-    values: VecDeque<SequenceValue>,
+    pub values: VecDeque<SequenceValue>,
 }
 
 #[derive(Default)]
