@@ -84,7 +84,7 @@ For more details on DriftDB-React, see [the React docs](/docs/react) or [this fo
 
 ## Limitations
 
-DriftDB is intended for use cases where a relatively small number of clients need to share some state over a relatively short period of time. For example, it could be used to build a shared whiteboard, or act as a signaling server for WebRTC. It does not currently support persisted state.
+DriftDB is intended for use cases where a relatively small number of clients need to share some state over a relatively short period of time. For example, it could be used to build a shared whiteboard, or act as a signaling server for WebRTC. Room state is currently persisted for 24 hours after the last write.
 
 DriftDB has a very basic trust model: if you have the room ID, you have write access to all data in the room. This is useful for applications whose multiplayer functionality can be siloed into rooms, where access to each room can be limited to a set of people trusted by the room’s creator.
 

@@ -145,6 +145,7 @@ impl DbRoom {
                     WebsocketEvent::Message(msg) => {
                         if let Some(text) = msg.text() {
                             if let Ok(message) = serde_json::from_str::<MessageToDatabase>(&text) {
+                                // Reset the timeout for cleaning up the database.
                                 state.bump_alarm().await.expect("Error bumping alarm");
                                 conn.send_message(&message).unwrap();
                             } else {
