@@ -17,10 +17,6 @@ compile_error!(
 );
 
 impl PersistedDb {
-    fn new(state: State) -> Self {
-        Self(state)
-    }
-
     pub async fn load_store(&self) -> Result<Store> {
         let storage = self.0.storage();
         let mut subjects = HashMap::<Key, ValueLog>::new();
@@ -30,9 +26,10 @@ impl PersistedDb {
 
         for kv in data.entries() {
             let kv = kv?;
-            let (key, value): (String, Value) = JsValueSerdeExt::into_serde(&kv)?;
+            let (key, value): (String, String) = JsValueSerdeExt::into_serde(&kv)?;
             let key_and_seq = KeyAndSeq::from_str(&key)?;
             max_seq = max_seq.max(key_and_seq.seq.0);
+            let value: Value = serde_json::from_str(&value)?;
 
             subjects
                 .entry(key_and_seq.key)

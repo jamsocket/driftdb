@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"scripts": {
 		"deploy": "wrangler publish",
-		"dev": "wrangler dev --local"
+		"dev": "wrangler dev --local --persist-to ./data"
 	},
 	"devDependencies": {
 		"wrangler": "^2.8.1"
