@@ -29,7 +29,9 @@ impl Display for Key {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default, PartialOrd, Ord, Hash,
+)]
 pub struct SequenceNumber(pub u64);
 
 impl SequenceNumber {
