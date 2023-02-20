@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev-local": "NEXT_PUBLIC_DRIFTDB_URL=http://127.0.0.1:8787 next dev",
     "build": "next build && next export",
     "start": "next start",
     "lint": "next lint"
