@@ -108,6 +108,7 @@ impl DbRoom {
         server.accept()?;
 
         let db = self.db.get_db().await?;
+        let state = self.db.state.clone();
 
         let url = req.url()?;
 
@@ -144,6 +145,7 @@ impl DbRoom {
                     WebsocketEvent::Message(msg) => {
                         if let Some(text) = msg.text() {
                             if let Ok(message) = serde_json::from_str::<MessageToDatabase>(&text) {
+                                state.bump_alarm().await.expect("Error bumping alarm");
                                 conn.send_message(&message).unwrap();
                             } else {
                                 server

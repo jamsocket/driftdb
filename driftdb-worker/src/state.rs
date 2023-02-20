@@ -9,13 +9,18 @@ use worker::{console_log, wasm_bindgen_futures};
 use worker::{ListOptions, Result, State};
 
 #[derive(Clone)]
-struct WrappedState(Arc<State>);
+pub struct WrappedState(Arc<State>);
 unsafe impl Send for WrappedState {}
 unsafe impl Sync for WrappedState {}
 
 impl WrappedState {
     fn new(state: State) -> Self {
         Self(Arc::new(state))
+    }
+
+    pub async fn bump_alarm(&self) -> Result<()> {
+        let storage = self.0.storage();
+        storage.set_alarm(1_000 * 60 * 60 * 24).await
     }
 }
 
@@ -25,7 +30,7 @@ compile_error!(
 );
 
 pub struct PersistedDb {
-    state: WrappedState,
+    pub state: WrappedState,
     db: Option<Database>,
 }
 
@@ -46,10 +51,7 @@ impl PersistedDb {
             return Ok(db.clone());
         }
 
-        let state = self
-            .state
-            .0
-            .as_ref();
+        let state = self.state.0.as_ref();
         let result = self.load_store(&state).await;
 
         let mut db = match result {
