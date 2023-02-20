@@ -1,8 +1,21 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::fmt::Display;
+
+pub mod key_seq_pair;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Default, Deserialize, Hash)]
 pub struct Key(String);
+
+impl Key {
+    pub fn new(s: String) -> Self {
+        Key(s)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 
 impl From<&str> for Key {
     fn from(s: &str) -> Self {
@@ -10,8 +23,28 @@ impl From<&str> for Key {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default, PartialOrd, Ord)]
+impl Display for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default, PartialOrd, Ord, Hash,
+)]
 pub struct SequenceNumber(pub u64);
+
+impl SequenceNumber {
+    pub fn next(&self) -> Self {
+        SequenceNumber(self.0 + 1)
+    }
+}
+
+impl Display for SequenceNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -52,7 +85,7 @@ pub enum MessageToDatabase {
     },
     Ping {
         nonce: Option<u64>,
-    }
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
@@ -82,5 +115,5 @@ pub enum MessageFromDatabase {
     },
     Pong {
         nonce: Option<u64>,
-    }
+    },
 }

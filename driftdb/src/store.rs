@@ -3,8 +3,8 @@ use serde_json::Value;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Default)]
-struct ValueLog {
-    values: VecDeque<SequenceValue>,
+pub struct ValueLog {
+    pub values: VecDeque<SequenceValue>,
 }
 
 #[derive(Default)]
@@ -31,7 +31,10 @@ pub enum PushInstruction {
     PushStart(SequenceValue),
 }
 
+#[derive(Clone)]
 pub struct ApplyResult {
+    pub key: Key,
+
     /// Optional instruction to remove some or all existing values.
     pub delete_instruction: Option<DeleteInstruction>,
 
@@ -42,7 +45,7 @@ pub struct ApplyResult {
     pub broadcast: Option<SequenceValue>,
 
     /// The number of retained records for the given subject after applying the action.
-    pub subject_size: usize,
+    pub stream_size: usize,
 }
 
 impl ApplyResult {
@@ -52,6 +55,13 @@ impl ApplyResult {
 }
 
 impl Store {
+    pub fn new(subjects: HashMap<Key, ValueLog>, sequence_number: SequenceNumber) -> Self {
+        Self {
+            subjects,
+            sequence_number,
+        }
+    }
+
     fn next_seq(&mut self) -> SequenceNumber {
         self.sequence_number.0 += 1;
         self.sequence_number
@@ -84,10 +94,11 @@ impl Store {
                 let value = SequenceValue { value, seq };
 
                 ApplyResult {
+                    key: key.clone(),
                     delete_instruction: None,
                     push_instruction: Some(PushInstruction::Push(value.clone())),
                     broadcast: Some(value),
-                    subject_size: 0,
+                    stream_size: 0,
                 }
             }
             Action::Replace => {
@@ -95,28 +106,31 @@ impl Store {
                 let value = SequenceValue { value, seq };
 
                 ApplyResult {
+                    key: key.clone(),
                     delete_instruction: Some(DeleteInstruction::Delete),
                     push_instruction: Some(PushInstruction::Push(value.clone())),
                     broadcast: Some(value),
-                    subject_size: 0,
+                    stream_size: 0,
                 }
             }
             Action::Compact { seq } => ApplyResult {
+                key: key.clone(),
                 delete_instruction: Some(DeleteInstruction::DeleteUpTo(*seq)),
                 push_instruction: Some(PushInstruction::PushStart(SequenceValue {
                     value,
                     seq: *seq,
                 })),
                 broadcast: None,
-                subject_size: 0,
+                stream_size: 0,
             },
             Action::Relay => {
                 let seq = self.next_seq();
                 ApplyResult {
+                    key: key.clone(),
                     delete_instruction: None,
                     push_instruction: None,
                     broadcast: Some(SequenceValue { value, seq }),
-                    subject_size: 0,
+                    stream_size: 0,
                 }
             }
         };
@@ -145,7 +159,7 @@ impl Store {
             None => {}
         }
 
-        result.subject_size = self.subjects.get(key).map(|v| v.values.len()).unwrap_or(0);
+        result.stream_size = self.subjects.get(key).map(|v| v.values.len()).unwrap_or(0);
 
         result
     }

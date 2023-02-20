@@ -2,7 +2,7 @@ use crate::Opts;
 use anyhow::Result;
 use axum::{
     body::BoxBody,
-    extract::{ws::WebSocket, Path, Query, State, WebSocketUpgrade, Host},
+    extract::{ws::WebSocket, Host, Path, Query, State, WebSocketUpgrade},
     response::Response,
     routing::{get, post},
     Json, Router,

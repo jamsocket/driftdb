@@ -1,9 +1,15 @@
-use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
+use crate::state::PersistedDb;
+use driftdb::{MessageFromDatabase, MessageToDatabase};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
 use tokio_stream::StreamExt;
-use worker::*;
+use worker::{
+    async_trait, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures, worker_sys,
+    Cors, Env, Method, Request, Response, Result, RouteContext, WebSocket, WebSocketPair,
+};
+use worker::{Router, WebsocketEvent};
 
+mod state;
 mod utils;
 
 pub fn cors() -> Cors {
@@ -86,9 +92,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
 #[durable_object]
 pub struct DbRoom {
-    #[allow(unused)]
-    state: State,
-    db: Database,
+    db: PersistedDb,
 }
 
 /// A raw WebSocket is not Send or Sync, but that doesn't matter because we are compiling
@@ -98,17 +102,13 @@ struct WrappedWebSocket(WebSocket);
 unsafe impl Send for WrappedWebSocket {}
 unsafe impl Sync for WrappedWebSocket {}
 
-#[cfg(all(not(target_arch = "wasm32"), not(debug_assertions)))]
-compile_error!(
-    "driftdb-worker should only be compiled to WebAssembly. Use driftdb-server for other targets."
-);
-
 impl DbRoom {
     async fn connect(&mut self, req: Request) -> Result<Response> {
         let WebSocketPair { client, server } = WebSocketPair::new()?;
         server.accept()?;
 
-        let db = self.db.clone();
+        let db = self.db.get_db().await?;
+        let state = self.db.state.clone();
 
         let url = req.url()?;
 
@@ -145,6 +145,8 @@ impl DbRoom {
                     WebsocketEvent::Message(msg) => {
                         if let Some(text) = msg.text() {
                             if let Ok(message) = serde_json::from_str::<MessageToDatabase>(&text) {
+                                // Reset the timeout for cleaning up the database.
+                                state.bump_alarm().await.expect("Error bumping alarm");
                                 conn.send_message(&message).unwrap();
                             } else {
                                 server
@@ -173,8 +175,7 @@ impl DbRoom {
 impl DurableObject for DbRoom {
     fn new(state: State, _: Env) -> Self {
         Self {
-            state,
-            db: Database::new(),
+            db: PersistedDb::new(state),
         }
     }
 
@@ -185,11 +186,18 @@ impl DurableObject for DbRoom {
         match (method, path) {
             (Method::Get, "connect") => self.connect(req).await,
             (Method::Post, "send") => {
+                let db = self.db.get_db().await?;
                 let message: MessageToDatabase = req.json().await?;
-                let response = self.db.send_message(&message);
+                let response = db.send_message(&message);
                 Response::from_json(&response)
             }
             _ => Response::error("Room command not found", 404),
         }
+    }
+
+    async fn alarm(&mut self) -> Result<Response> {
+        self.db.cleanup().await?;
+
+        Response::ok("ok")
     }
 }
