@@ -4,13 +4,20 @@ use driftdb::{
 };
 use gloo_utils::format::JsValueSerdeExt;
 use serde_json::Value;
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use worker::{console_log, wasm_bindgen_futures};
 use worker::{ListOptions, Result, State};
 
-struct WrappedState(State);
+#[derive(Clone)]
+struct WrappedState(Arc<State>);
 unsafe impl Send for WrappedState {}
 unsafe impl Sync for WrappedState {}
+
+impl WrappedState {
+    fn new(state: State) -> Self {
+        Self(Arc::new(state))
+    }
+}
 
 #[cfg(all(not(target_arch = "wasm32"), not(debug_assertions)))]
 compile_error!(
@@ -18,16 +25,20 @@ compile_error!(
 );
 
 pub struct PersistedDb {
-    state: Option<WrappedState>,
+    state: WrappedState,
     db: Option<Database>,
 }
 
 impl PersistedDb {
     pub fn new(state: State) -> Self {
         Self {
-            state: Some(WrappedState(state)),
+            state: WrappedState::new(state),
             db: None,
         }
+    }
+
+    pub async fn cleanup(&mut self) -> Result<()> {
+        self.state.0.storage().delete_all().await
     }
 
     pub async fn get_db(&mut self) -> Result<Database> {
@@ -37,9 +48,9 @@ impl PersistedDb {
 
         let state = self
             .state
-            .take()
-            .expect("Exactly one of db or state should not be None.");
-        let result = self.load_store(&state.0).await;
+            .0
+            .as_ref();
+        let result = self.load_store(&state).await;
 
         let mut db = match result {
             Ok(store) => Database::new_from_store(store),
@@ -50,6 +61,7 @@ impl PersistedDb {
         };
 
         {
+            let state = self.state.clone();
             db.set_replica_callback(move |apply_result: &ApplyResult| {
                 let mut storage = state.0.storage();
                 let apply_result = apply_result.clone();

@@ -191,4 +191,10 @@ impl DurableObject for DbRoom {
             _ => Response::error("Room command not found", 404),
         }
     }
+
+    async fn alarm(&mut self) -> Result<Response> {
+        self.db.cleanup().await?;
+
+        Response::ok("ok")
+    }
 }
