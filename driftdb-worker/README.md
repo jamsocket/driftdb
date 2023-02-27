@@ -15,13 +15,16 @@ Usage requires `wrangler`, Cloudflare’s CLI tool.
 
 To run locally:
 
-    npm i
-    npm run dev
+```bash
+npm i
+npm run dev
+```
 
 Deploying to Cloudflare requires a Durable Objects subscription from Cloudflare. (If you just want to experiment with DriftDB, you can access a server for free at [jamsocket.live](https://jamsocket.live))
 
 To deploy to Cloudflare:
 
-    npm i
-    npm run deploy
-
+```bash
+npm i
+npm run deploy
+```
