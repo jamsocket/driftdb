@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use crate::server::run_server;
 use clap::Parser;
 use std::net::IpAddr;

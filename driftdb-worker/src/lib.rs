@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use crate::state::PersistedDb;
 use driftdb::{MessageFromDatabase, MessageToDatabase};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
