@@ -170,13 +170,15 @@ export class DbConnection {
     }
 
     disconnect() {
-        this.connection!.onclose = null
-        this.connection!.onerror = null
-        this.connection!.onmessage = null
-        this.connection!.onopen = null
+        if (this.connection !== null) {
+            this.connection.onclose = null
+            this.connection.onerror = null
+            this.connection.onmessage = null
+            this.connection.onopen = null
+            this.connection.close()
+        }
         this.subscriptions = new SubscriptionManager()
         this.sizeSubscriptions = new SubscriptionManager()
-        this.connection?.close()
     }
 
     setStatus(connected: boolean) {
