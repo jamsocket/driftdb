@@ -2,6 +2,8 @@
 sidebar_position: 8
 ---
 
+# JavaScript interface
+
 DriftDB provides a vanilla JavaScript API. This provides the underlying interface that we use for
 [DriftDB-React](/docs/react), but it can also be used directly by applications.
 
@@ -13,8 +15,6 @@ The same application may use both the low-level and high-level interfaces, altho
 use both a high-level interface and low-level subscription on the same key.
 
 Before using the low-level API, we recommend reading the [data model](/docs/data-model) documentation.
-
-# React Interface
 
 ## Installation
 
