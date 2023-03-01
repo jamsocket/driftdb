@@ -4,6 +4,7 @@ use crate::state::PersistedDb;
 use driftdb::{MessageFromDatabase, MessageToDatabase};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
+use std::time::Duration;
 use tokio_stream::StreamExt;
 use worker::{
     async_trait, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures, worker_sys,
@@ -14,15 +15,58 @@ use worker::{Router, WebsocketEvent};
 mod state;
 mod utils;
 
+const ROOM_ID_LENGTH: usize = 24;
+
+#[derive(Clone)]
+pub struct Configuration {
+    pub use_https: bool,
+    pub retention: Duration,
+}
+
+impl Configuration {
+    pub fn from_ctx(ctx: &RouteContext<()>) -> Configuration {
+        let use_https = ctx
+            .var("PROTOCOL")
+            .map(|d| d.to_string() == "HTTPS")
+            .unwrap_or(false);
+        let retention = ctx
+            .var("RETENTION_SECONDS")
+            .ok()
+            .map(|d| d.to_string())
+            .and_then(|d| d.parse::<u64>().ok())
+            .unwrap_or(60 * 60 * 24);
+        let retention = Duration::from_secs(retention);
+
+        Configuration {
+            use_https,
+            retention,
+        }
+    }
+
+    pub fn from_env(ctx: &Env) -> Configuration {
+        let use_https = ctx
+            .var("PROTOCOL")
+            .map(|d| d.to_string() == "HTTPS")
+            .unwrap_or(false);
+        let retention = ctx
+            .var("RETENTION_SECONDS")
+            .ok()
+            .map(|d| d.to_string())
+            .and_then(|d| d.parse::<u64>().ok())
+            .unwrap_or(60 * 60 * 24);
+        let retention = Duration::from_secs(retention);
+
+        Configuration {
+            use_https,
+            retention,
+        }
+    }
+}
+
 pub fn cors() -> Cors {
     Cors::new()
         .with_methods(vec![Method::Post, Method::Get, Method::Options])
         .with_origins(vec!["*"])
-}
-
-fn use_http(ctx: &RouteContext<()>) -> bool {
-    let Ok(protocol) = ctx.var("PROTOCOL") else { return false };
-    protocol.to_string() == "HTTP"
 }
 
 fn room_result(req: Request, room_id: &str, use_https: bool) -> Result<Response> {
@@ -44,8 +88,9 @@ fn room_result(req: Request, room_id: &str, use_https: bool) -> Result<Response>
 }
 
 pub fn handle_room(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let configuration = Configuration::from_ctx(&ctx);
     if let Some(id) = ctx.param("room_id") {
-        room_result(req, id, !use_http(&ctx))
+        room_result(req, id, configuration.use_https)
     } else {
         Response::error("Bad Request", 400)
     }
@@ -61,8 +106,9 @@ fn random_room_id(length: usize) -> String {
 }
 
 pub fn handle_new_room(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let room_id = random_room_id(24);
-    room_result(req, &room_id, !use_http(&ctx))
+    let configuration = Configuration::from_ctx(&ctx);
+    let room_id = random_room_id(ROOM_ID_LENGTH);
+    room_result(req, &room_id, configuration.use_https)
 }
 
 pub async fn handle_room_request(req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -175,9 +221,10 @@ impl DbRoom {
 
 #[durable_object]
 impl DurableObject for DbRoom {
-    fn new(state: State, _: Env) -> Self {
+    fn new(state: State, env: Env) -> Self {
+        let configuration = Configuration::from_env(&env);
         Self {
-            db: PersistedDb::new(state),
+            db: PersistedDb::new(state, configuration),
         }
     }
 
