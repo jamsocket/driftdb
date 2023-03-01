@@ -8,19 +8,28 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use worker::{console_log, wasm_bindgen_futures};
 use worker::{ListOptions, Result, State};
 
+use crate::Configuration;
+
 #[derive(Clone)]
-pub struct WrappedState(Arc<State>);
+pub struct WrappedState {
+    state: Arc<State>,
+    configuration: Configuration,
+}
 unsafe impl Send for WrappedState {}
 unsafe impl Sync for WrappedState {}
 
 impl WrappedState {
-    fn new(state: State) -> Self {
-        Self(Arc::new(state))
+    fn new(state: State, configuration: Configuration) -> Self {
+        Self {
+            state: Arc::new(state),
+            configuration,
+        }
     }
 
     pub async fn bump_alarm(&self) -> Result<()> {
-        let storage = self.0.storage();
-        storage.set_alarm(1_000 * 60 * 60 * 24).await
+        let storage = self.state.storage();
+        let retention_ms = self.configuration.retention.as_millis() as i64;
+        storage.set_alarm(retention_ms).await
     }
 }
 
@@ -35,15 +44,17 @@ pub struct PersistedDb {
 }
 
 impl PersistedDb {
-    pub fn new(state: State) -> Self {
+    pub fn new(state: State, configuration: Configuration) -> Self {
+        let state = WrappedState::new(state, configuration);
+
         Self {
-            state: WrappedState::new(state),
+            state,
             db: None,
         }
     }
 
     pub async fn cleanup(&mut self) -> Result<()> {
-        self.state.0.storage().delete_all().await
+        self.state.state.storage().delete_all().await
     }
 
     pub async fn get_db(&mut self) -> Result<Database> {
@@ -51,7 +62,7 @@ impl PersistedDb {
             return Ok(db.clone());
         }
 
-        let state = self.state.0.as_ref();
+        let state = self.state.state.as_ref();
         let result = self.load_store(&state).await;
 
         let mut db = match result {
@@ -65,7 +76,7 @@ impl PersistedDb {
         {
             let state = self.state.clone();
             db.set_replica_callback(move |apply_result: &ApplyResult| {
-                let mut storage = state.0.storage();
+                let mut storage = state.state.storage();
                 let apply_result = apply_result.clone();
 
                 wasm_bindgen_futures::spawn_local(async move {
