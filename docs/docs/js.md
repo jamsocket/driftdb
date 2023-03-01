@@ -3,7 +3,7 @@ sidebar_position: 8
 ---
 
 DriftDB provides a vanilla JavaScript API. This provides the underlying interface that we use for
-[DriftDB-React](/react), but it can also be used directly by applications.
+[DriftDB-React](/docs/react), but it can also be used directly by applications.
 
 The JavaScript API provides a low-level subscription interface, which calls a provided callback every
 time a message is received on a particular key. It also provides some higher-level data synchronization
@@ -12,7 +12,7 @@ patterns.
 The same application may use both the low-level and high-level interfaces, although generally you should not
 use both a high-level interface and low-level subscription on the same key.
 
-Before using the low-level API, we recommend reading the [data model](/data-model) documentation.
+Before using the low-level API, we recommend reading the [data model](/docs/data-model) documentation.
 
 # React Interface
 
@@ -37,7 +37,7 @@ import { Api } from "driftdb/dist/api"
 
 ## Obtaining a room
 
-Every connection to a DriftDB server is scoped to a particular **room**, as described in the [data model](/data-model) documentation.
+Every connection to a DriftDB server is scoped to a particular **room**, as described in the [data model](/docs/data-model) documentation.
 
 The DriftDB server provides a way of creating a room, which is wrapped in the `Api` class. The `Api` class must first be constructed by providing the URL of a DriftDB server, like so:
 
