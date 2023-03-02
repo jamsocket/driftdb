@@ -86,17 +86,20 @@ export function useUniqueClientId(): string {
     return currentId.current
 }
 
-export function useSharedReducer<T, A>(key: string, reducer: (state: T, action: A) => T, initialValue: any, init: ((v: any) => T) = (a: any) => a): [T, (action: A) => void] {
+export function useSharedReducer<State, Action>(key: string, reducer: (state: State, action: Action) => State, initialValue: State): [State, (action: Action) => void];
+export function useSharedReducer<State, Action, InitialValue>(key: string, reducer: (state: State, action: Action) => State, initialValue: InitialValue, init: (initialValue: InitialValue) => State): [State, (action: Action) => void];
+
+export function useSharedReducer<State, Action>(key: string, reducer: (state: State, action: Action) => State, initialValue: unknown, init: ((v: any) => State) = (a: any) => a): [State, (action: Action) => void] {
     const db = useDatabase();
 
-    const initialStateRef = useRef<T>(null!)
+    const initialStateRef = useRef<State>(null!)
     if (initialStateRef.current === null) {
         initialStateRef.current = structuredClone(init(initialValue))
     }
 
-    const [state, setState] = React.useState<T>(initialStateRef.current);
+    const [state, setState] = React.useState<State>(initialStateRef.current);
 
-    const reducerRef = React.useRef<Reducer<T, A> | null>(null)
+    const reducerRef = React.useRef<Reducer<State, Action> | null>(null)
     if (reducerRef.current === null) {
         reducerRef.current = new Reducer({
             key,
