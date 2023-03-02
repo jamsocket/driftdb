@@ -9,7 +9,7 @@ class CallbackExpecter<T> {
     private resolve: ((v: T) => void) | null = null
     private reject: ((err: any) => void) | null = null
     private nextValue: T | null = null
-    private timeout: ReturnType<typeof setTimeout> | null = null
+    private timeout: number | null = null
 
     expect(message: string, timeoutMillis = 5_000): Promise<T> {
         if (this.nextValue) {
@@ -25,7 +25,7 @@ class CallbackExpecter<T> {
         return new Promise((resolve, reject) => {
             this.timeout = setTimeout(() => {
                 reject(new Error(`${message} out.`));
-            }, timeoutMillis);
+            }, timeoutMillis) as any as number;
             this.reject = reject;
             this.resolve = resolve;
         });
@@ -33,7 +33,7 @@ class CallbackExpecter<T> {
 
     accept = (value: T) => {
         if (this.timeout) {
-            clearTimeout(this.timeout as any as number);
+            clearTimeout(this.timeout);
             this.timeout = null;
         }
         if (this.resolve) {
