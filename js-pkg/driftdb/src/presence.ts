@@ -60,7 +60,7 @@ export class PresenceListener<T> {
         this.db.subscribe(this.key, this.onMessage)
 
         this.interval = setInterval(() => {
-            for (let client in this.presence) {
+            for (const client in this.presence) {
                 if (Date.now() - this.presence[client].lastSeen > this.maxPresenceInterval * 2) {
                     delete this.presence[client]
                 }
@@ -75,7 +75,7 @@ export class PresenceListener<T> {
     }
 
     private onMessage(event: SequenceValue) {
-        let message: PresenceMessage<T> = event.value as any
+        const message: PresenceMessage<T> = event.value as any
         if (message.client === this.clientId) {
             // Ignore our own messages.
             return

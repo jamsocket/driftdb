@@ -1,8 +1,8 @@
-import { DbConnection } from "."
+import { DbConnection } from "./index"
 import { SequenceValue } from "./types"
 
 export class StateListener<T> {
-    lastUpdateSent: number = 0
+    lastUpdateSent = 0
     lastValue: T | null = null
     debounceTimeout: number | null = null
     state: T | null = null
@@ -29,7 +29,7 @@ export class StateListener<T> {
 
     sendUpdate() {
         if (this.debounceTimeout !== null) {
-            window.clearTimeout(this.debounceTimeout)
+            clearTimeout(this.debounceTimeout)
             this.debounceTimeout = null
         }
         this.db?.send({
