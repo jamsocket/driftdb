@@ -1,5 +1,5 @@
-import { DbConnection, StateListener } from "../src";
-import { Api, RoomResult } from "../src/api";
+import { DbConnection, StateListener, Api, RoomResult } from "driftdb";
+import { expect, test } from "bun:test";
 
 // "localhost" breaks on some versions of node because of this
 // https://github.com/nodejs/undici/issues/1248#issuecomment-1214773044
@@ -9,7 +9,7 @@ class CallbackExpecter<T> {
     private resolve: ((v: T) => void) | null = null
     private reject: ((err: any) => void) | null = null
     private nextValue: T | null = null
-    private timeout: ReturnType<typeof setTimeout> | null = null
+    private timeout: number | null = null
 
     expect(message: string, timeoutMillis = 5_000): Promise<T> {
         if (this.nextValue) {
@@ -25,7 +25,7 @@ class CallbackExpecter<T> {
         return new Promise((resolve, reject) => {
             this.timeout = setTimeout(() => {
                 reject(new Error(`${message} out.`));
-            }, timeoutMillis);
+            }, timeoutMillis) as any as number;
             this.reject = reject;
             this.resolve = resolve;
         });

@@ -1,10 +1,10 @@
 import { LatencyTest } from "./latency"
 import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
-import WebSocket from "isomorphic-ws"
-
-export { PresenceListener, WrappedPresenceMessage, PresenceMessage } from "./presence"
+export { PresenceListener } from "./presence"
+export type { WrappedPresenceMessage, PresenceMessage } from "./presence"
 export { StateListener } from "./state"
 export { Reducer } from "./reducer"
+export { Api, RoomResult } from "./api"
 
 const CLIENT_ID_KEY = "_driftdb_client_id"
 
