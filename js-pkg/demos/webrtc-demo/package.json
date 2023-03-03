@@ -1,0 +1,22 @@
+{
+    "name": "driftdb-webrtcsignal",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "build": "esbuild app.jsx --bundle --sourcemap --target=firefox102 --outdir=public/out",
+        "start": "npm run build && { cd public && python3 -m http.server ; }",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Abhishek Cherath",
+    "license": "ISC",
+    "dependencies": {
+        "driftdb-react": "^1.0.10",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    },
+    "devDependencies": {
+        "esbuild": "^0.17.10",
+        "typescript": "^4.9.5"
+    }
+}
