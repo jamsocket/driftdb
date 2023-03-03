@@ -1,4 +1,4 @@
-import { DbConnection, StateListener, Api, RoomResult } from "driftdb";
+import { DbConnection, StateListener, Api, RoomResult, HttpConnection } from "driftdb";
 import { expect, test } from "bun:test";
 
 // "localhost" breaks on some versions of node because of this
@@ -125,3 +125,34 @@ test("Test optimistic set and get.", async () => {
     db2.disconnect()
 })
 
+test("Test HTTP endpoint.", async () => {
+    let api = new Api(API_SERVER);
+
+    // Create a new room.
+    let room = await api.newRoom();
+    
+    let conn = new HttpConnection(room.http_url)
+
+    let result = await conn.send({
+        type: "push",
+        action: {type: "append"},
+        key: "my-key",
+        value: "foobar"
+    })
+
+    expect(result).toEqual(null)
+
+    let result2 = await conn.send({
+        type: "get",
+        key: "my-key",
+    })
+
+    expect(result2).toEqual({
+        data: [{
+            seq: 1,
+            value: "foobar",
+        }],
+        key: "my-key",
+        type: "init"
+    })
+})

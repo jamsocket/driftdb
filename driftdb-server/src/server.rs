@@ -141,6 +141,20 @@ struct ConnectionQuery {
 
 type RoomMap = DashMap<String, Arc<Database>>;
 
+async fn post_message(
+    Path(room_id): Path<String>,
+    State(room_map): State<Arc<RoomMap>>,
+    Json(msg): Json<MessageToDatabase>,
+) -> std::result::Result<Json<Option<MessageFromDatabase>>, StatusCode> {
+    let database = room_map
+        .get(&room_id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let result = database.send_message(&msg);
+
+    Ok(Json(result))
+}
+
 async fn connection(
     Path(room_id): Path<String>,
     ws: WebSocketUpgrade,
@@ -207,6 +221,7 @@ pub fn api_routes() -> Result<Router> {
     Ok(Router::new()
         .route("/new", post(new_room))
         .route("/room/:room_id/connect", get(connection))
+        .route("/room/:room_id/send", post(post_message))
         .route("/room/:room_id", get(room))
         .layer(cors)
         .with_state(Arc::new(room_map)))
