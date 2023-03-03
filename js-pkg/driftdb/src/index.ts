@@ -5,6 +5,7 @@ export type { WrappedPresenceMessage, PresenceMessage } from "./presence"
 export { StateListener } from "./state"
 export { Reducer } from "./reducer"
 export { Api, RoomResult } from "./api"
+export { HttpConnection } from "./http"
 
 const CLIENT_ID_KEY = "_driftdb_client_id"
 

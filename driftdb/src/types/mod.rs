@@ -81,6 +81,7 @@ pub enum MessageToDatabase {
         /// Key to get.
         key: Key,
         /// Sequence number to start from.
+        #[serde(default)]
         seq: SequenceNumber,
     },
     Ping {

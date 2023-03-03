@@ -37,7 +37,7 @@ export type MessageToDb = {
 } | {
     type: 'get'
     key: Key
-    seq: SequenceNumber
+    seq?: SequenceNumber
 } | {
     type: 'ping'
     nonce?: number
