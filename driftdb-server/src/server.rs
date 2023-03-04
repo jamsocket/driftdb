@@ -18,6 +18,7 @@ use tower_http::{
 };
 use tracing::Level;
 use uuid::Uuid;
+use hyper::http::header;
 
 struct TypedWebSocket<Inbound: DeserializeOwned, Outbound: Serialize> {
     socket: WebSocket,
@@ -119,7 +120,7 @@ async fn handle_socket(socket: WebSocket, database: Arc<Database>, debug: bool) 
                         break;
                     }
                     Err(err) => {
-                        tracing::error!(?err, "Failed to receive message from user.");
+                        tracing::warn!(?err, "Failed to receive message from user.");
 
                         let _ = socket.send(MessageFromDatabase::Error {
                             message: format!("Failed to receive message from user: {}", err),
@@ -213,7 +214,12 @@ impl RoomResult {
 
 pub fn api_routes() -> Result<Router> {
     let cors = CorsLayer::new()
-        .allow_methods([Method::GET])
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers(vec![
+            header::AUTHORIZATION,
+            header::ACCEPT,
+            header::CONTENT_TYPE,
+        ])
         .allow_origin(AllowOrigin::any());
 
     let room_map = RoomMap::new();
