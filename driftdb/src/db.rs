@@ -1,7 +1,7 @@
 use crate::{
     connection::Connection,
     store::{StoreInstruction, Store},
-    types::{MessageFromDatabase, MessageToDatabase, SequenceNumber},
+    types::{MessageFromDatabase, MessageToDatabase, SequenceNumber, ReplicaInstruction},
 };
 use std::sync::{Arc, Mutex, Weak};
 
@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex, Weak};
 pub struct DatabaseInner {
     connections: Vec<Weak<Connection>>,
     debug_connections: Vec<Weak<Connection>>,
+    replica_connections: Vec<Weak<Connection>>,
     replica_callback: Option<Arc<Box<dyn Fn(&StoreInstruction) + Send + Sync>>>,
     store: Store,
 }
@@ -19,6 +20,19 @@ impl DatabaseInner {
             MessageToDatabase::Push { key, value, action } => {
                 let instruction = self.store.convert_to_instruction(key, value.clone(), action);
                 let stream_size = self.store.apply(&instruction);
+
+                if !self.replica_connections.is_empty() {
+                    let message = MessageFromDatabase::ReplicaInstruction(ReplicaInstruction::StoreInstruction(instruction.clone()));
+
+                    self.replica_connections.retain(|conn| {
+                        if let Some(conn) = conn.upgrade() {
+                            (conn.callback)(&message);
+                            true
+                        } else {
+                            false
+                        }
+                    });
+                }
 
                 if !self.debug_connections.is_empty() {
                     if instruction.mutates() {
@@ -158,6 +172,20 @@ impl Database {
             (conn.callback)(&message);
         }
 
+        db.debug_connections.push(Arc::downgrade(&conn));
+        conn
+    }
+
+    pub fn connect_replica<F>(&self, callback: F) -> Arc<Connection>
+    where
+        F: Fn(&MessageFromDatabase) + 'static + Send + Sync,
+    {
+        let conn = Arc::new(Connection::new(callback, self.inner.clone()));
+        let mut db = self.inner.lock().unwrap();
+
+        let message = MessageFromDatabase::ReplicaInstruction(ReplicaInstruction::InitInstruction(db.store.clone()));
+        (conn.callback)(&message);
+        
         db.debug_connections.push(Arc::downgrade(&conn));
         conn
     }

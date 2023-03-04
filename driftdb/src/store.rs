@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, VecDeque};
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct ValueLog {
     pub values: VecDeque<SequenceValue>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Store {
     subjects: HashMap<Key, ValueLog>,
     sequence_number: SequenceNumber,
@@ -32,7 +32,7 @@ pub enum PushInstruction {
     PushStart(SequenceValue),
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct StoreInstruction {
     pub key: Key,
 
