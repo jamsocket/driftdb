@@ -1,6 +1,6 @@
 use crate::{
     connection::Connection,
-    store::{ApplyResult, Store},
+    store::{StoreInstruction, Store},
     types::{MessageFromDatabase, MessageToDatabase, SequenceNumber},
 };
 use std::sync::{Arc, Mutex, Weak};
@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex, Weak};
 pub struct DatabaseInner {
     connections: Vec<Weak<Connection>>,
     debug_connections: Vec<Weak<Connection>>,
-    replica_callback: Option<Arc<Box<dyn Fn(&ApplyResult) + Send + Sync>>>,
+    replica_callback: Option<Arc<Box<dyn Fn(&StoreInstruction) + Send + Sync>>>,
     store: Store,
 }
 
@@ -17,10 +17,11 @@ impl DatabaseInner {
     pub fn send_message(&mut self, message: &MessageToDatabase) -> Option<MessageFromDatabase> {
         match message {
             MessageToDatabase::Push { key, value, action } => {
-                let result = self.store.apply(key, value.clone(), action);
+                let instruction = self.store.convert_to_instruction(key, value.clone(), action);
+                let stream_size = self.store.apply(&instruction);
 
                 if !self.debug_connections.is_empty() {
-                    if result.mutates() {
+                    if instruction.mutates() {
                         let data = self.store.get(key, SequenceNumber::default());
 
                         let message = MessageFromDatabase::Init {
@@ -36,7 +37,7 @@ impl DatabaseInner {
                                 false
                             }
                         });
-                    } else if let Some(seq_value) = &result.broadcast {
+                    } else if let Some(seq_value) = &instruction.broadcast {
                         let message = MessageFromDatabase::Push {
                             key: key.clone(),
                             value: seq_value.value.clone(),
@@ -53,13 +54,13 @@ impl DatabaseInner {
                     }
                 }
 
-                if result.mutates() {
+                if instruction.mutates() {
                     if let Some(replica_callback) = &self.replica_callback {
-                        (replica_callback)(&result);
+                        (replica_callback)(&instruction);
                     }
                 }
 
-                if let Some(seq_value) = result.broadcast {
+                if let Some(seq_value) = instruction.broadcast {
                     let message = MessageFromDatabase::Push {
                         key: key.clone(),
                         value: seq_value.value.clone(),
@@ -75,10 +76,10 @@ impl DatabaseInner {
                     });
                 }
 
-                if result.stream_size > 1 {
+                if stream_size > 1 {
                     let message = MessageFromDatabase::StreamSize {
                         key: key.clone(),
-                        size: result.stream_size,
+                        size: stream_size,
                     };
                     return Some(message);
                 }
@@ -121,7 +122,7 @@ impl Database {
 
     pub fn set_replica_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&ApplyResult) + 'static + Send + Sync,
+        F: Fn(&StoreInstruction) + 'static + Send + Sync,
     {
         self.inner.lock().unwrap().replica_callback = Some(Arc::new(Box::new(callback)));
     }

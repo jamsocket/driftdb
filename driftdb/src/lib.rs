@@ -9,5 +9,5 @@ mod tests;
 pub mod types;
 
 pub use db::Database;
-pub use store::{ApplyResult, DeleteInstruction, PushInstruction, Store, ValueLog};
+pub use store::{StoreInstruction, DeleteInstruction, PushInstruction, Store, ValueLog};
 pub use types::{Key, MessageFromDatabase, MessageToDatabase};
