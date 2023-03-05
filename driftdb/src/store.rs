@@ -65,6 +65,10 @@ impl Store {
         self.sequence_number
     }
 
+    pub fn subjects(&self) -> &HashMap<Key, ValueLog> {
+        &self.subjects
+    }
+
     pub fn dump(&self) -> HashMap<Key, Vec<SequenceValue>> {
         self.subjects
             .iter()

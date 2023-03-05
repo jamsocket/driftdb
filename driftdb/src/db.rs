@@ -186,7 +186,7 @@ impl Database {
         let message = MessageFromDatabase::ReplicaInstruction(ReplicaInstruction::InitInstruction(db.store.clone()));
         (conn.callback)(&message);
         
-        db.debug_connections.push(Arc::downgrade(&conn));
+        db.replica_connections.push(Arc::downgrade(&conn));
         conn
     }
 }
