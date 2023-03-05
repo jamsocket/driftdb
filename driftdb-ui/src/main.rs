@@ -3,8 +3,10 @@ use log::Level;
 use serde::Deserialize;
 use yew::prelude::*;
 use yew_router::prelude::*;
+use crate::components::value_view::PrettyJson;
 
 pub mod sync_store;
+mod components;
 mod websocket;
 
 #[derive(Clone, Routable, PartialEq)]
@@ -25,6 +27,7 @@ fn Console() -> Html {
     let location = use_location().unwrap();
     let ConsoleQuery { db_url } = location.query().unwrap();
 
+    // TODO: this is inefficient.
     let subjects = use_sync_store(&db_url).store().subjects().clone();
 
     html! {
@@ -42,7 +45,7 @@ fn Console() -> Html {
                                     html! {
                                         <li>
                                             {value.seq.0} {"-"}
-                                            {value.value.to_string()}
+                                            <PrettyJson value={value.value.clone()} />
                                         </li>
                                     }
                                 })}
