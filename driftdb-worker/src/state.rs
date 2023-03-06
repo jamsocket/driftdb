@@ -7,7 +7,6 @@ use serde_json::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use worker::{console_log, wasm_bindgen_futures};
 use worker::{ListOptions, Result, State};
-
 use crate::Configuration;
 
 #[derive(Clone)]
