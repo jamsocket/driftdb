@@ -22,7 +22,6 @@ export class EventListener<T> {
     }
 
     dispatch(event: T) {
-        console.log('listeners', this.listeners)
         this.listeners.forEach(l => l(event))
     }
 }
@@ -37,9 +36,7 @@ export class SubscriptionManager<T> {
         }
 
         const subscription = this.subscriptions.get(key)!
-        console.log('installing listener', key)
         subscription.addListener(listener)
-        console.log('listere', this.subscriptions)
     }
 
     unsubscribe(subject: Key, listener: (event: T) => void) {
@@ -53,8 +50,6 @@ export class SubscriptionManager<T> {
     }
 
     dispatch(key: Key, event: T) {
-        console.log('dispatching', key, this.subscriptions)
-
         if (!this.subscriptions.has(key)) {
             return
         }
@@ -138,7 +133,6 @@ export class DbConnection {
             } else {
                 message = JSON.parse(event.data as string)
             }
-            console.log('rec message', message, typeof message)
             
             this.messageListener.dispatch(message)
 
@@ -150,7 +144,6 @@ export class DbConnection {
                     })
                     break
                 case 'push':
-                    console.log('push')
                     this.subscriptions.dispatch(message.key, {
                         seq: message.seq,
                         value: message.value,
