@@ -22,14 +22,16 @@ use hyper::http::header;
 
 struct TypedWebSocket<Inbound: DeserializeOwned, Outbound: Serialize> {
     socket: WebSocket,
+    binary: bool,
     _ph_inbound: std::marker::PhantomData<Inbound>,
     _ph_outbound: std::marker::PhantomData<Outbound>,
 }
 
 impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Outbound> {
-    pub fn new(socket: WebSocket) -> Self {
+    pub fn new(socket: WebSocket, binary: bool) -> Self {
         Self {
             socket,
+            binary,
             _ph_inbound: std::marker::PhantomData,
             _ph_outbound: std::marker::PhantomData,
         }
@@ -49,8 +51,9 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
                             .await?;
                     }
                     axum::extract::ws::Message::Pong(_) => {}
-                    axum::extract::ws::Message::Binary(_) => {
-                        return Err(anyhow::anyhow!("Binary messages are not supported."));
+                    axum::extract::ws::Message::Binary(bytes) => {
+                        let msg = ciborium::de::from_reader(bytes.as_slice())?;
+                        return Ok(Some(msg));
                     }
                     axum::extract::ws::Message::Text(msg) => {
                         let msg = serde_json::from_str(&msg)?;
@@ -64,17 +67,28 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
 
     pub async fn send(&mut self, msg: Outbound) -> Result<()> {
         let msg = serde_json::to_string(&msg)?;
-        self.socket
+
+        if self.binary {
+            let mut writer = Vec::new();
+            ciborium::ser::into_writer(&msg, &mut writer)?;
+            self.socket
+                .send(axum::extract::ws::Message::Binary(writer))
+                .await?;
+            return Ok(());
+        } else {
+            self.socket
             .send(axum::extract::ws::Message::Text(msg))
             .await?;
+        }
+        
         Ok(())
     }
 }
 
-async fn handle_socket(socket: WebSocket, database: Arc<Database>, debug: bool, replica: bool) {
+async fn handle_socket(socket: WebSocket, database: Arc<Database>, connection_spec: ConnectionQuery) {
     let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
     let mut socket: TypedWebSocket<MessageToDatabase, MessageFromDatabase> =
-        TypedWebSocket::new(socket);
+        TypedWebSocket::new(socket, connection_spec.binary);
 
     let callback = move |message: &MessageFromDatabase| {
         let result = sender.try_send(message.clone());
@@ -87,7 +101,7 @@ async fn handle_socket(socket: WebSocket, database: Arc<Database>, debug: bool, 
         }
     };
 
-    let conn = if debug {
+    let conn = if connection_spec.debug {
         database.connect_debug(callback)
     } else if replica {
         database.connect_replica(callback)
@@ -143,6 +157,9 @@ struct ConnectionQuery {
 
     #[serde(default)]
     replica: bool,
+
+    #[serde(default)]
+    binary: bool,
 }
 
 type RoomMap = DashMap<String, Arc<Database>>;
@@ -172,7 +189,7 @@ async fn connection(
         .expect("Room should have been created before connection.")
         .clone();
 
-    ws.on_upgrade(move |socket| handle_socket(socket, database, query.debug, query.replica))
+    ws.on_upgrade(move |socket| handle_socket(socket, database, query))
 }
 
 async fn new_room(Host(hostname): Host, State(room_map): State<Arc<RoomMap>>) -> Json<RoomResult> {

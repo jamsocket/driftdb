@@ -6,6 +6,7 @@ export { StateListener } from "./state"
 export { Reducer } from "./reducer"
 export { Api, RoomResult } from "./api"
 export { HttpConnection } from "./http"
+import * as CBOR from 'cbor-web';
 
 const CLIENT_ID_KEY = "_driftdb_client_id"
 
@@ -21,6 +22,7 @@ export class EventListener<T> {
     }
 
     dispatch(event: T) {
+        console.log('listeners', this.listeners)
         this.listeners.forEach(l => l(event))
     }
 }
@@ -29,13 +31,15 @@ export class SubscriptionManager<T> {
     subscriptions: Map<string, EventListener<T>> = new Map()
 
     subscribe(subject: Key, listener: (event: T) => void) {
-        const key = JSON.stringify(subject)
+        const key = subject
         if (!this.subscriptions.has(key)) {
             this.subscriptions.set(key, new EventListener())
         }
 
         const subscription = this.subscriptions.get(key)!
+        console.log('installing listener', key)
         subscription.addListener(listener)
+        console.log('listere', this.subscriptions)
     }
 
     unsubscribe(subject: Key, listener: (event: T) => void) {
@@ -48,8 +52,9 @@ export class SubscriptionManager<T> {
         subscription.removeListener(listener)
     }
 
-    dispatch(subject: Key, event: T) {
-        const key = JSON.stringify(subject)
+    dispatch(key: Key, event: T) {
+        console.log('dispatching', key, this.subscriptions)
+
         if (!this.subscriptions.has(key)) {
             return
         }
@@ -70,9 +75,15 @@ export class DbConnection {
     private dbUrl: string | null = null
     private reconnectLoopHandle: ReturnType<typeof setTimeout> | null = null
     private activeLatencyTest: LatencyTest | null = null
+    private binary = false
 
-    connect(dbUrl: string): Promise<void> {
+    connect(dbUrl: string, binary: boolean = false): Promise<void> {
+        if (binary) {
+            dbUrl = dbUrl + "?binary=true"
+        }
+        
         this.dbUrl = dbUrl
+        this.binary = binary
 
         var resolve: () => void
         var reject: (err: any) => void
@@ -86,6 +97,7 @@ export class DbConnection {
         }
 
         this.connection = new WebSocket(dbUrl)
+        this.connection.binaryType = 'arraybuffer'
 
         this.connection.onopen = () => {
             if (this.reconnectLoopHandle) {
@@ -115,21 +127,30 @@ export class DbConnection {
             console.log("Connection closed, attempting to reconnect...")
 
             this.reconnectLoopHandle = setTimeout(() => {
-                this.connect(dbUrl)
+                this.connect(dbUrl, binary)
             }, 1000)
         }
 
         this.connection.onmessage = (event) => {
-            const message: MessageFromDb = JSON.parse(event.data as string)
+            let message: MessageFromDb
+            if (event.data instanceof ArrayBuffer) {
+                message = CBOR.decode(event.data as any)
+            } else {
+                message = JSON.parse(event.data as string)
+            }
+            console.log('rec message', message, typeof message)
+            
             this.messageListener.dispatch(message)
 
             switch (message.type) {
                 case 'init':
+                    let key = message.key
                     message.data.forEach((value) => {
-                        this.subscriptions.dispatch(message.key, value)
+                        this.subscriptions.dispatch(key, value)
                     })
                     break
                 case 'push':
+                    console.log('push')
                     this.subscriptions.dispatch(message.key, {
                         seq: message.seq,
                         value: message.value,
@@ -144,6 +165,8 @@ export class DbConnection {
                         this.activeLatencyTest = null
                     }
                     break
+                default:
+                    console.error("Unknown message type", message.type)
             }
         }
 
@@ -193,7 +216,11 @@ export class DbConnection {
             return
         }
 
-        this.connection!.send(JSON.stringify(message))
+        if (this.binary) {
+            this.connection!.send(CBOR.encode(message))
+        } else {
+            this.connection!.send(JSON.stringify(message))
+        }
     }
 
     subscribe(key: Key, listener: (event: SequenceValue) => void, sizeCallback?: (size: number) => void) {
