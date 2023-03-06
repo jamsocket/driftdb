@@ -66,8 +66,6 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
     }
 
     pub async fn send(&mut self, msg: Outbound) -> Result<()> {
-        let msg = serde_json::to_string(&msg)?;
-
         if self.binary {
             let mut writer = Vec::new();
             ciborium::ser::into_writer(&msg, &mut writer)?;
@@ -76,6 +74,8 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
                 .await?;
             return Ok(());
         } else {
+            let msg = serde_json::to_string(&msg)?;
+
             self.socket
             .send(axum::extract::ws::Message::Text(msg))
             .await?;
