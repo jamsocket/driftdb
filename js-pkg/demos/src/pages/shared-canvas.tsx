@@ -185,7 +185,7 @@ function drawCanvas(ctx: CanvasRenderingContext2D, sharedCanvas: SharedCanvas, p
 
 export default function App() {
   return (
-    <DriftDBProvider api={DRIFTDB_URL}>
+    <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
       <SharedCanvas />
     </DriftDBProvider>
   )

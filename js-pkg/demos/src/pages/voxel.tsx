@@ -170,7 +170,7 @@ export function VoxelEditor() {
 
 export default function App() {
     return (
-        <DriftDBProvider api={DRIFTDB_URL}>
+        <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
             <VoxelEditor />
         </DriftDBProvider>
     )
