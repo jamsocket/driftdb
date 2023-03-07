@@ -269,6 +269,7 @@ name = "driftdb"
 version = "0.1.4"
 dependencies = [
  "serde",
+ "serde_cbor",
  "serde_json",
 ]
 
@@ -283,6 +284,7 @@ dependencies = [
  "driftdb",
  "hyper",
  "serde",
+ "serde_cbor",
  "serde_json",
  "tokio",
  "tower-http",
@@ -301,6 +303,7 @@ dependencies = [
  "getrandom",
  "gloo-utils",
  "rand",
+ "serde_cbor",
  "serde_json",
  "tokio-stream",
  "worker",
@@ -438,6 +441,12 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
 ]
+
+[[package]]
+name = "half"
+version = "1.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
 
 [[package]]
 name = "hashbrown"
@@ -969,6 +978,16 @@ dependencies = [
  "js-sys",
  "serde",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "serde_cbor"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bef2ebfde456fb76bbcf9f59315333decc4fda0b2b44b420243c11e0f5ec1f5"
+dependencies = [
+ "half",
+ "serde",
 ]
 
 [[package]]

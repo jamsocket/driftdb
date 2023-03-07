@@ -1,14 +1,13 @@
+use crate::Configuration;
 use driftdb::{
     types::{key_seq_pair::KeyAndSeq, SequenceNumber, SequenceValue},
     ApplyResult, Database, DeleteInstruction, Key, PushInstruction, Store, ValueLog,
 };
 use gloo_utils::format::JsValueSerdeExt;
-use serde_json::Value;
+use serde_cbor::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
-use worker::{console_log, wasm_bindgen_futures};
+use worker::{console_log, wasm_bindgen::JsValue, wasm_bindgen_futures};
 use worker::{ListOptions, Result, State};
-
-use crate::Configuration;
 
 #[derive(Clone)]
 pub struct WrappedState {
@@ -47,10 +46,7 @@ impl PersistedDb {
     pub fn new(state: State, configuration: Configuration) -> Self {
         let state = WrappedState::new(state, configuration);
 
-        Self {
-            state,
-            db: None,
-        }
+        Self { state, db: None }
     }
 
     pub async fn cleanup(&mut self) -> Result<()> {
@@ -132,10 +128,10 @@ impl PersistedDb {
                             KeyAndSeq::new(apply_result.key.clone(), sequence_value.seq)
                                 .to_string();
 
-                        let storage_value = serde_json::to_string(&sequence_value.value).unwrap();
+                        let buffer = serde_cbor::to_vec(&sequence_value.value).unwrap();
 
                         storage
-                            .put(&storage_key, &storage_value)
+                            .put(&storage_key, &buffer)
                             .await
                             .expect("Error putting value in storage.");
                     }
@@ -156,10 +152,18 @@ impl PersistedDb {
 
         for kv in data.entries() {
             let kv = kv?;
-            let (key, value): (String, String) = JsValueSerdeExt::into_serde(&kv)?;
+
+            let (value, key) = if let Ok((value, key)) = read_old_way(&kv) {
+                // First, attempt to read JSON-style.
+                (value, key)
+            } else {
+                // If that fails, attempt to read CBOR-style.
+                let (value, key) = read_new_way(&kv)?;
+                (value, key)
+            };
+
             let key_and_seq = KeyAndSeq::from_str(&key)?;
             max_seq = max_seq.max(key_and_seq.seq.0);
-            let value: Value = serde_json::from_str(&value)?;
 
             subjects
                 .entry(key_and_seq.key)
@@ -173,4 +177,19 @@ impl PersistedDb {
 
         Ok(Store::new(subjects, SequenceNumber(max_seq)))
     }
+}
+
+fn read_old_way(value: &JsValue) -> Result<(Value, String)> {
+    let (key, value): (String, String) = JsValueSerdeExt::into_serde(value)?;
+
+    let value: Value = serde_json::from_str(&value)?;
+    Ok((value, key))
+}
+
+fn read_new_way(value: &JsValue) -> Result<(Value, String)> {
+    let (key, value): (String, Vec<u8>) = JsValueSerdeExt::into_serde(value)?;
+
+    let value: Value = serde_cbor::from_slice(value.as_slice())
+        .map_err(|_| worker::Error::RustError("Error interpreting value as CBOR.".to_string()))?;
+    Ok((value, key))
 }

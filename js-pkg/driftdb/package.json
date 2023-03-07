@@ -23,5 +23,8 @@
   },
   "bugs": {
     "url": "https://github.com/drifting-in-space/driftdb/issues"
+  },
+  "dependencies": {
+    "cbor-web": "^8.1.0"
   }
 }

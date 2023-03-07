@@ -1,5 +1,6 @@
 import { DbConnection, StateListener, Api, RoomResult, HttpConnection } from "driftdb";
 import { expect, test } from "bun:test";
+import { SequenceValue } from "driftdb/dist/types";
 
 // "localhost" breaks on some versions of node because of this
 // https://github.com/nodejs/undici/issues/1248#issuecomment-1214773044
@@ -7,7 +8,6 @@ const API_SERVER = "http://127.0.0.1:8080/";
 
 class CallbackExpecter<T> {
     private resolve: ((v: T) => void) | null = null
-    private reject: ((err: any) => void) | null = null
     private nextValue: T | null = null
     private timeout: number | null = null
 
@@ -26,7 +26,6 @@ class CallbackExpecter<T> {
             this.timeout = setTimeout(() => {
                 reject(new Error(`${message} out.`));
             }, timeoutMillis) as any as number;
-            this.reject = reject;
             this.resolve = resolve;
         });
     }
@@ -39,18 +38,17 @@ class CallbackExpecter<T> {
         if (this.resolve) {
             this.resolve(value);
             this.resolve = null;
-            this.reject = null;
         } else {
             this.nextValue = value;
         }
     }
 }
 
-async function connectToNewRoom(): Promise<{ db: DbConnection, room: RoomResult }> {
+async function connectToNewRoom({cbor}: {cbor?: boolean} = {}): Promise<{ db: DbConnection, room: RoomResult }> {
     let api = new Api(API_SERVER);
     let room = await api.newRoom();
     let db = new DbConnection();
-    await db.connect(room.socket_url);
+    await db.connect(room.socket_url, cbor);
     return {db, room};
 }
 
@@ -104,14 +102,64 @@ test("Test optimistic set and get.", async () => {
     db.disconnect()
 })
 
+test("Send and receive binary.", async () => {
+    let {db} = await connectToNewRoom({cbor: true});
+
+    let expecter = new CallbackExpecter<SequenceValue>();
+    db.subscribe("key", expecter.accept)
+
+    db.send({
+        type: "push",
+        key: "key",
+        action: {type: "append"},
+        value: "foo",
+    })
+
+    let result = await expecter.expect("Optimistic set not received.")
+    expect(result).toEqual({
+        seq: 1,
+        value: "foo",
+    })
+
+    db.disconnect()
+})
+
+test("Send and receive UInt8Array.", async () => {
+    let {db} = await connectToNewRoom({cbor: true});
+
+    let expecter = new CallbackExpecter<SequenceValue>();
+    db.subscribe("key", expecter.accept)
+
+    db.send({
+        type: "push",
+        key: "key",
+        action: {type: "append"},
+        value: {
+            abc: "derp",
+            v: new Uint8Array([1, 2, 3]),
+        }
+    })
+
+    let result = await expecter.expect("Optimistic set not received.")
+    expect(result).toEqual({
+        seq: 1,
+        value: {
+            abc: "derp",
+            v: new Uint8Array([1, 2, 3]),
+        }
+    })
+
+    db.disconnect()
+})
+
 test("Test optimistic set and get.", async () => {
     let {db, room} = await connectToNewRoom();
     let db2 = await connectToRoom(room);
 
-    let expecter = new CallbackExpecter<string>();
+    let expecter = new CallbackExpecter<string>()
     let stateListener = new StateListener(expecter.accept, db, "key")
 
-    let expecter2 = new CallbackExpecter<string>();
+    let expecter2 = new CallbackExpecter<string>()
     new StateListener(expecter2.accept, db2, "key")
 
     stateListener.setStateOptimistic("foo")

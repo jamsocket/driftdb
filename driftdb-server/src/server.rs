@@ -9,6 +9,7 @@ use axum::{
 };
 use dashmap::DashMap;
 use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
+use hyper::http::header;
 use hyper::{Method, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
@@ -18,18 +19,19 @@ use tower_http::{
 };
 use tracing::Level;
 use uuid::Uuid;
-use hyper::http::header;
 
 struct TypedWebSocket<Inbound: DeserializeOwned, Outbound: Serialize> {
     socket: WebSocket,
+    cbor: bool,
     _ph_inbound: std::marker::PhantomData<Inbound>,
     _ph_outbound: std::marker::PhantomData<Outbound>,
 }
 
 impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Outbound> {
-    pub fn new(socket: WebSocket) -> Self {
+    pub fn new(socket: WebSocket, cbor: bool) -> Self {
         Self {
             socket,
+            cbor,
             _ph_inbound: std::marker::PhantomData,
             _ph_outbound: std::marker::PhantomData,
         }
@@ -49,8 +51,9 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
                             .await?;
                     }
                     axum::extract::ws::Message::Pong(_) => {}
-                    axum::extract::ws::Message::Binary(_) => {
-                        return Err(anyhow::anyhow!("Binary messages are not supported."));
+                    axum::extract::ws::Message::Binary(bytes) => {
+                        let msg = serde_cbor::from_slice(bytes.as_slice())?;
+                        return Ok(Some(msg));
                     }
                     axum::extract::ws::Message::Text(msg) => {
                         let msg = serde_json::from_str(&msg)?;
@@ -63,18 +66,32 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
     }
 
     pub async fn send(&mut self, msg: Outbound) -> Result<()> {
-        let msg = serde_json::to_string(&msg)?;
-        self.socket
-            .send(axum::extract::ws::Message::Text(msg))
-            .await?;
+        if self.cbor {
+            let v = serde_cbor::to_vec(&msg)?;
+
+            self.socket
+                .send(axum::extract::ws::Message::Binary(v))
+                .await?;
+        } else {
+            let msg = serde_json::to_string(&msg)?;
+
+            self.socket
+                .send(axum::extract::ws::Message::Text(msg))
+                .await?;
+        }
+
         Ok(())
     }
 }
 
-async fn handle_socket(socket: WebSocket, database: Arc<Database>, debug: bool) {
+async fn handle_socket(
+    socket: WebSocket,
+    database: Arc<Database>,
+    connection_spec: ConnectionQuery,
+) {
     let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
     let mut socket: TypedWebSocket<MessageToDatabase, MessageFromDatabase> =
-        TypedWebSocket::new(socket);
+        TypedWebSocket::new(socket, connection_spec.cbor);
 
     let callback = move |message: &MessageFromDatabase| {
         let result = sender.try_send(message.clone());
@@ -87,7 +104,7 @@ async fn handle_socket(socket: WebSocket, database: Arc<Database>, debug: bool) 
         }
     };
 
-    let conn = if debug {
+    let conn = if connection_spec.debug {
         database.connect_debug(callback)
     } else {
         database.connect(callback)
@@ -138,6 +155,9 @@ async fn handle_socket(socket: WebSocket, database: Arc<Database>, debug: bool) 
 struct ConnectionQuery {
     #[serde(default)]
     debug: bool,
+
+    #[serde(default)]
+    cbor: bool,
 }
 
 type RoomMap = DashMap<String, Arc<Database>>;
@@ -147,9 +167,7 @@ async fn post_message(
     State(room_map): State<Arc<RoomMap>>,
     Json(msg): Json<MessageToDatabase>,
 ) -> std::result::Result<Json<Option<MessageFromDatabase>>, StatusCode> {
-    let database = room_map
-        .get(&room_id)
-        .ok_or(StatusCode::NOT_FOUND)?;
+    let database = room_map.get(&room_id).ok_or(StatusCode::NOT_FOUND)?;
 
     let result = database.send_message(&msg);
 
@@ -167,7 +185,7 @@ async fn connection(
         .expect("Room should have been created before connection.")
         .clone();
 
-    ws.on_upgrade(move |socket| handle_socket(socket, database, query.debug))
+    ws.on_upgrade(move |socket| handle_socket(socket, database, query))
 }
 
 async fn new_room(Host(hostname): Host, State(room_map): State<Arc<RoomMap>>) -> Json<RoomResult> {
