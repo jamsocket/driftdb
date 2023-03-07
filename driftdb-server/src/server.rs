@@ -52,9 +52,6 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
                     }
                     axum::extract::ws::Message::Pong(_) => {}
                     axum::extract::ws::Message::Binary(bytes) => {
-                        // let mm: Result<serde_cbor::Value, _> = ciborium::de::from_reader(bytes.as_slice());
-                        // tracing::info!("h1 {:?}", mm);
-
                         let msg = serde_cbor::from_slice(bytes.as_slice())?;
                         return Ok(Some(msg));
                     }
