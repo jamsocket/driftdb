@@ -326,6 +326,7 @@ dependencies = [
 name = "driftdb"
 version = "0.1.4"
 dependencies = [
+ "ciborium",
  "serde",
  "serde_json",
 ]

@@ -10,5 +10,8 @@ documentation = "https://driftdb.com"
 readme = "README.md"
 
 [dependencies]
+ciborium = "0.2.0"
 serde = { version = "1.0.152", features = ["derive"] }
+
+[dev-dependencies]
 serde_json = "1.0.91"

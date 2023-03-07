@@ -198,7 +198,14 @@ mod tests {
         tests::MessageStash,
         types::{Action, SequenceNumber, SequenceValue},
     };
-    use serde_json::{json, Value};
+    use serde_json::{json};
+
+    fn json_to_cbor(value: serde_json::Value) -> ciborium::value::Value {
+        let mut writer: Vec<u8> = Vec::new();
+        ciborium::ser::into_writer(&value, &mut writer).unwrap();
+        let value = ciborium::de::from_reader(writer.as_slice()).unwrap();
+        value
+    }
 
     fn subscribe(conn: &Connection, key: &str) {
         conn.send_message(&MessageToDatabase::Get {
@@ -208,10 +215,10 @@ mod tests {
         .unwrap();
     }
 
-    fn push(conn: &Connection, key: &str, value: Value, action: Action) {
+    fn push(conn: &Connection, key: &str, value: serde_json::Value, action: Action) {
         conn.send_message(&MessageToDatabase::Push {
             key: key.into(),
-            value,
+            value: json_to_cbor(value),
             action,
         })
         .unwrap();
@@ -258,7 +265,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "bar": "baz" }),
+                value: json_to_cbor(json!({ "bar": "baz" })),
                 seq: SequenceNumber(1),
             }),
             stash.next()
@@ -270,7 +277,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "abc": "def" }),
+                value: json_to_cbor(json!({ "abc": "def" })),
                 seq: SequenceNumber(2),
             }),
             stash.next()
@@ -308,7 +315,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "bar": "baz" }),
+                value: json_to_cbor(json!({ "bar": "baz" })),
                 seq: SequenceNumber(1),
             }),
             stash1.next()
@@ -317,7 +324,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "bar": "baz" }),
+                value: json_to_cbor(json!({ "bar": "baz" })),
                 seq: SequenceNumber(1),
             }),
             stash2.next()
@@ -346,7 +353,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "bar": "baz" }),
+                value: json_to_cbor(json!({ "bar": "baz" })),
                 seq: SequenceNumber(1),
             }),
             stash.next()
@@ -361,7 +368,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Init {
                 data: vec![SequenceValue {
-                    value: json!({ "bar": "baz" }),
+                    value: json_to_cbor(json!({ "bar": "baz" })),
                     seq: SequenceNumber(1),
                 }],
                 key: "foo".into()
@@ -392,7 +399,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "bar": "baz" }),
+                value: json_to_cbor(json!({ "bar": "baz" })),
                 seq: SequenceNumber(1),
             }),
             stash1.next()
@@ -424,7 +431,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "bar": "baz" }),
+                value: json_to_cbor(json!({ "bar": "baz" })),
                 seq: SequenceNumber(1),
             }),
             stash.next()
@@ -435,7 +442,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "abc": "def" }),
+                value: json_to_cbor(json!({ "abc": "def" })),
                 seq: SequenceNumber(2),
             }),
             stash.next()
@@ -453,7 +460,7 @@ mod tests {
         assert_eq!(
             Some(MessageFromDatabase::Push {
                 key: "foo".into(),
-                value: json!({ "boo": "baa" }),
+                value: json_to_cbor(json!({ "boo": "baa" })),
                 seq: SequenceNumber(3),
             }),
             stash.next()
@@ -477,15 +484,15 @@ mod tests {
                 key: "foo".into(),
                 data: vec![
                     SequenceValue {
-                        value: json!({ "bar": "baz" }),
+                        value: json_to_cbor(json!({ "bar": "baz" })),
                         seq: SequenceNumber(1),
                     },
                     SequenceValue {
-                        value: json!({ "abc": "def" }),
+                        value: json_to_cbor(json!({ "abc": "def" })),
                         seq: SequenceNumber(2),
                     },
                     SequenceValue {
-                        value: json!({ "boo": "baa" }),
+                        value: json_to_cbor(json!({ "boo": "baa" })),
                         seq: SequenceNumber(3),
                     }
                 ]
@@ -534,11 +541,11 @@ mod tests {
                 key: "foo".into(),
                 data: vec![
                     SequenceValue {
-                        value: json!({ "moo": "ram" }),
+                        value: json_to_cbor(json!({ "moo": "ram" })),
                         seq: SequenceNumber(2),
                     },
                     SequenceValue {
-                        value: json!({ "boo": "baa" }),
+                        value: json_to_cbor(json!({ "boo": "baa" })),
                         seq: SequenceNumber(3),
                     }
                 ]
