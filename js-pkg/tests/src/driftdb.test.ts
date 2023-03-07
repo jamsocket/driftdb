@@ -44,11 +44,11 @@ class CallbackExpecter<T> {
     }
 }
 
-async function connectToNewRoom({binary}: {binary?: boolean} = {}): Promise<{ db: DbConnection, room: RoomResult }> {
+async function connectToNewRoom({cbor}: {cbor?: boolean} = {}): Promise<{ db: DbConnection, room: RoomResult }> {
     let api = new Api(API_SERVER);
     let room = await api.newRoom();
     let db = new DbConnection();
-    await db.connect(room.socket_url, binary);
+    await db.connect(room.socket_url, cbor);
     return {db, room};
 }
 
@@ -103,7 +103,7 @@ test("Test optimistic set and get.", async () => {
 })
 
 test("Send and receive binary.", async () => {
-    let {db} = await connectToNewRoom({binary: true});
+    let {db} = await connectToNewRoom({cbor: true});
 
     let expecter = new CallbackExpecter<SequenceValue>();
     db.subscribe("key", expecter.accept)
@@ -125,7 +125,7 @@ test("Send and receive binary.", async () => {
 })
 
 test("Send and receive UInt8Array.", async () => {
-    let {db} = await connectToNewRoom({binary: true});
+    let {db} = await connectToNewRoom({cbor: true});
 
     let expecter = new CallbackExpecter<SequenceValue>();
     db.subscribe("key", expecter.accept)
