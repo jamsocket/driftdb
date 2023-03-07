@@ -31,7 +31,7 @@ export default function Demos() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div>
-        <DriftDBProvider api={DRIFTDB_URL}>
+        <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
           <StatusIndicator />
           <StateDemo />
           <RoomQRCode />

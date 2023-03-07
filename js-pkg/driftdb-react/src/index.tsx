@@ -206,6 +206,7 @@ interface DriftDBProviderProps {
     children: React.ReactNode
     api: string
     room?: string
+    crdt?: boolean
 }
 
 export function DriftDBProvider(props: DriftDBProviderProps) {
@@ -239,7 +240,7 @@ export function DriftDBProvider(props: DriftDBProviderProps) {
                 window.history.replaceState({}, "", url.toString());
             }
 
-            dbRef.current?.connect(result.socket_url);
+            dbRef.current?.connect(result.socket_url, props.crdt);
         });
 
         return () => {
