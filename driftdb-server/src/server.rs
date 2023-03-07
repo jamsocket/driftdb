@@ -72,7 +72,6 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
             self.socket
                 .send(axum::extract::ws::Message::Binary(v))
                 .await?;
-            return Ok(());
         } else {
             let msg = serde_json::to_string(&msg)?;
 
