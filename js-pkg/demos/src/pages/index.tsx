@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Link from 'next/link'
 
 export default function Demos() {
   return (
@@ -9,21 +8,8 @@ export default function Demos() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.png" />
       </Head>
-      <div>
-        <h1>DriftDB Demos</h1>
-        <ul>
-          <li>Basic</li>
-          <ul>
-            <li><Link href="/state">Shared State</Link></li>
-            <li><Link href="/counter">Counter</Link></li>
-            <li><Link href="/tictactoe">Tic Tac Toe</Link></li>
-          </ul>
-          <li>Advanced</li>
-          <ul>
-            <li><Link href="/shared-canvas">Shared Canvas</Link></li>
-            <li><Link href="/voxel">Voxel Editor</Link></li>
-          </ul>
-        </ul>
+      <div className="mt-12 flex items-center justify-center text-lg text-gray-900">
+        <h1>Select a demo in the sidebar</h1>
       </div>
     </>
   )

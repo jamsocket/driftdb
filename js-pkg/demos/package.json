@@ -10,6 +10,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@headlessui/react": "^1.7.13",
+    "@heroicons/react": "^2.0.16",
     "@next/font": "13.1.2",
     "@react-three/drei": "^9.56.10",
     "@react-three/fiber": "^8.10.1",
