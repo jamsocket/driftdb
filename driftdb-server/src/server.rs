@@ -9,6 +9,7 @@ use axum::{
 };
 use dashmap::DashMap;
 use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
+use hyper::http::header;
 use hyper::{Method, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
@@ -18,7 +19,6 @@ use tower_http::{
 };
 use tracing::Level;
 use uuid::Uuid;
-use hyper::http::header;
 
 struct TypedWebSocket<Inbound: DeserializeOwned, Outbound: Serialize> {
     socket: WebSocket,
@@ -51,7 +51,10 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
                             .await?;
                     }
                     axum::extract::ws::Message::Pong(_) => {}
-                    axum::extract::ws::Message::Binary(bytes) => {
+                    axum::extract::ws::Message::Binary(bytes) => {                        
+                        let mm: Result<ciborium::value::Value, _> = ciborium::de::from_reader(bytes.as_slice());
+                        tracing::info!("h1 {:?}", mm);
+
                         let msg = ciborium::de::from_reader(bytes.as_slice())?;
                         return Ok(Some(msg));
                     }
@@ -77,15 +80,19 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
             let msg = serde_json::to_string(&msg)?;
 
             self.socket
-            .send(axum::extract::ws::Message::Text(msg))
-            .await?;
+                .send(axum::extract::ws::Message::Text(msg))
+                .await?;
         }
-        
+
         Ok(())
     }
 }
 
-async fn handle_socket(socket: WebSocket, database: Arc<Database>, connection_spec: ConnectionQuery) {
+async fn handle_socket(
+    socket: WebSocket,
+    database: Arc<Database>,
+    connection_spec: ConnectionQuery,
+) {
     let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
     let mut socket: TypedWebSocket<MessageToDatabase, MessageFromDatabase> =
         TypedWebSocket::new(socket, connection_spec.binary);
@@ -164,9 +171,7 @@ async fn post_message(
     State(room_map): State<Arc<RoomMap>>,
     Json(msg): Json<MessageToDatabase>,
 ) -> std::result::Result<Json<Option<MessageFromDatabase>>, StatusCode> {
-    let database = room_map
-        .get(&room_id)
-        .ok_or(StatusCode::NOT_FOUND)?;
+    let database = room_map.get(&room_id).ok_or(StatusCode::NOT_FOUND)?;
 
     let result = database.send_message(&msg);
 
