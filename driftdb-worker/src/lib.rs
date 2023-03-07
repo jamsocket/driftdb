@@ -7,8 +7,9 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tokio_stream::StreamExt;
 use worker::{
-    async_trait, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures, worker_sys,
-    Cors, Env, Method, Request, Response, Result, RouteContext, WebSocket, WebSocketPair,
+    async_trait, console_warn, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures,
+    worker_sys, Cors, Env, Method, Request, Response, Result, RouteContext, WebSocket,
+    WebSocketPair,
 };
 use worker::{Router, WebsocketEvent};
 
@@ -146,9 +147,33 @@ pub struct DbRoom {
 /// A raw WebSocket is not Send or Sync, but that doesn't matter because we are compiling
 /// to WebAssembly, which is single-threaded, so we wrap it in a newtype struct which
 /// implements Send and Sync.
-struct WrappedWebSocket(WebSocket);
+#[derive(Clone)]
+struct WrappedWebSocket {
+    socket: WebSocket,
+    use_cbor: bool,
+}
 unsafe impl Send for WrappedWebSocket {}
 unsafe impl Sync for WrappedWebSocket {}
+
+impl WrappedWebSocket {
+    fn new(socket: WebSocket, use_cbor: bool) -> Self {
+        WrappedWebSocket { socket, use_cbor }
+    }
+
+    fn send(&self, message: &MessageFromDatabase) -> Result<()> {
+        if self.use_cbor {
+            let message = serde_cbor::to_vec(message).map_err(|_| {
+                worker::Error::RustError("Error encoding message to CBOR.".to_string())
+            })?;
+            self.socket.send_with_bytes(&message)?;
+        } else {
+            let message = serde_json::to_string(message)?;
+            self.socket.send_with_str(&message)?;
+        }
+
+        Ok(())
+    }
+}
 
 impl DbRoom {
     async fn connect(&mut self, req: Request) -> Result<Response> {
@@ -165,20 +190,18 @@ impl DbRoom {
             .map(|(k, v)| (k.into_owned(), v.into_owned()))
             .collect();
 
-        let debug = query.get("debug").map(|s| s == "true").unwrap_or(false);
+        let debug = query.get("debug").map(|s| s != "").unwrap_or(false);
+        let use_cbor = query.get("cbor").map(|s| s != "").unwrap_or(false);
+
+        let server = WrappedWebSocket::new(server, use_cbor);
 
         wasm_bindgen_futures::spawn_local(async move {
-            let mut event_stream = server.events().expect("could not open stream");
+            let mut event_stream = server.socket.events().expect("could not open stream");
 
             let conn = {
-                let server = WrappedWebSocket(server.clone());
+                let server = server.clone();
                 let callback = move |message: &MessageFromDatabase| {
-                    server
-                        .0
-                        .send_with_str(
-                            serde_json::to_string(&message).expect("Could not encode message."),
-                        )
-                        .expect("could not send message");
+                    server.send(&message).expect("could not send message");
                 };
 
                 if debug {
@@ -198,14 +221,25 @@ impl DbRoom {
                                 conn.send_message(&message).unwrap();
                             } else {
                                 server
-                                    .send_with_str(
-                                        &serde_json::to_string(&MessageFromDatabase::Error {
-                                            message: format!("Could not decode message: {}", text),
-                                        })
-                                        .unwrap(),
-                                    )
+                                    .send(&MessageFromDatabase::Error {
+                                        message: format!("Could not decode message: {}", text),
+                                    })
                                     .unwrap();
                             }
+                        } else if let Some(bytes) = msg.bytes() {
+                            if let Ok(message) = serde_cbor::from_slice(bytes.as_slice()) {
+                                // Reset the timeout for cleaning up the database.
+                                state.bump_alarm().await.expect("Error bumping alarm");
+                                conn.send_message(&message).unwrap();
+                            } else {
+                                server
+                                    .send(&MessageFromDatabase::Error {
+                                        message: format!("Could not decode message: {:?}", bytes),
+                                    })
+                                    .unwrap();
+                            }
+                        } else {
+                            console_warn!("Received unknown message type.");
                         }
                     }
                     WebsocketEvent::Close(_) => {
