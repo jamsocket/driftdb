@@ -69,15 +69,15 @@ export class DbConnection {
     private dbUrl: string | null = null
     private reconnectLoopHandle: ReturnType<typeof setTimeout> | null = null
     private activeLatencyTest: LatencyTest | null = null
-    private binary = false
+    private cbor = false
 
-    connect(dbUrl: string, binary: boolean = false): Promise<void> {
-        if (binary) {
-            dbUrl = dbUrl + "?binary=true"
+    connect(dbUrl: string, cbor: boolean = false): Promise<void> {
+        if (cbor) {
+            dbUrl = dbUrl + "?cbor=true"
         }
         
         this.dbUrl = dbUrl
-        this.binary = binary
+        this.cbor = cbor
 
         var resolve: () => void
         var reject: (err: any) => void
@@ -121,7 +121,7 @@ export class DbConnection {
             console.log("Connection closed, attempting to reconnect...")
 
             this.reconnectLoopHandle = setTimeout(() => {
-                this.connect(dbUrl, binary)
+                this.connect(dbUrl, cbor)
             }, 1000)
         }
 
@@ -208,7 +208,7 @@ export class DbConnection {
             return
         }
 
-        if (this.binary) {
+        if (this.cbor) {
             this.connection!.send(CBOR.encode(message))
         } else {
             this.connection!.send(JSON.stringify(message))

@@ -22,16 +22,16 @@ use uuid::Uuid;
 
 struct TypedWebSocket<Inbound: DeserializeOwned, Outbound: Serialize> {
     socket: WebSocket,
-    binary: bool,
+    cbor: bool,
     _ph_inbound: std::marker::PhantomData<Inbound>,
     _ph_outbound: std::marker::PhantomData<Outbound>,
 }
 
 impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Outbound> {
-    pub fn new(socket: WebSocket, binary: bool) -> Self {
+    pub fn new(socket: WebSocket, cbor: bool) -> Self {
         Self {
             socket,
-            binary,
+            cbor,
             _ph_inbound: std::marker::PhantomData,
             _ph_outbound: std::marker::PhantomData,
         }
@@ -69,7 +69,7 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
     }
 
     pub async fn send(&mut self, msg: Outbound) -> Result<()> {
-        if self.binary {
+        if self.cbor {
             let v = serde_cbor::to_vec(&msg)?;
 
             self.socket
@@ -95,7 +95,7 @@ async fn handle_socket(
 ) {
     let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
     let mut socket: TypedWebSocket<MessageToDatabase, MessageFromDatabase> =
-        TypedWebSocket::new(socket, connection_spec.binary);
+        TypedWebSocket::new(socket, connection_spec.cbor);
 
     let callback = move |message: &MessageFromDatabase| {
         let result = sender.try_send(message.clone());
@@ -161,7 +161,7 @@ struct ConnectionQuery {
     debug: bool,
 
     #[serde(default)]
-    binary: bool,
+    cbor: bool,
 }
 
 type RoomMap = DashMap<String, Arc<Database>>;
