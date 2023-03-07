@@ -156,8 +156,10 @@ impl PersistedDb {
             let kv = kv?;
 
             let (value, key) = if let Ok((value, key)) = read_old_way(&kv) {
+                // First, attempt to read JSON-style.
                 (value, key)
             } else {
+                // If that fails, attempt to read CBOR-style.
                 let (value, key) = read_new_way(&kv)?;
                 (value, key)
             };
