@@ -1,10 +1,10 @@
 use crate::Configuration;
-use serde_cbor::Value;
 use driftdb::{
     types::{key_seq_pair::KeyAndSeq, SequenceNumber, SequenceValue},
     StoreInstruction, Database, DeleteInstruction, Key, PushInstruction, Store, ValueLog,
 };
 use gloo_utils::format::JsValueSerdeExt;
+use serde_cbor::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use worker::{console_log, wasm_bindgen::JsValue, wasm_bindgen_futures};
 use worker::{ListOptions, Result, State};
@@ -187,9 +187,9 @@ fn read_old_way(value: &JsValue) -> Result<(Value, String)> {
 }
 
 fn read_new_way(value: &JsValue) -> Result<(Value, String)> {
-    let (key, value): (String, String) = JsValueSerdeExt::into_serde(value)?;
-    let key_and_seq = KeyAndSeq::from_str(&key)?;
+    let (key, value): (String, Vec<u8>) = JsValueSerdeExt::into_serde(value)?;
 
-    let value: Value = serde_json::from_str(&value)?;
-    Ok((value, key_and_seq.key.to_string()))
+    let value: Value = serde_cbor::from_slice(value.as_slice())
+        .map_err(|_| worker::Error::RustError("Error interpreting value as CBOR.".to_string()))?;
+    Ok((value, key))
 }
