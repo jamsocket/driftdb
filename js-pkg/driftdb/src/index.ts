@@ -29,8 +29,7 @@ export class EventListener<T> {
 export class SubscriptionManager<T> {
     subscriptions: Map<string, EventListener<T>> = new Map()
 
-    subscribe(subject: Key, listener: (event: T) => void) {
-        const key = subject
+    subscribe(key: Key, listener: (event: T) => void) {
         if (!this.subscriptions.has(key)) {
             this.subscriptions.set(key, new EventListener())
         }
@@ -129,9 +128,9 @@ export class DbConnection {
         this.connection.onmessage = (event) => {
             let message: MessageFromDb
             if (event.data instanceof ArrayBuffer) {
-                message = CBOR.decode(event.data as any)
+                message = CBOR.decode(event.data)
             } else {
-                message = JSON.parse(event.data as string)
+                message = JSON.parse(event.data)
             }
             
             this.messageListener.dispatch(message)

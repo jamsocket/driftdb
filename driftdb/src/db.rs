@@ -198,7 +198,7 @@ mod tests {
         tests::MessageStash,
         types::{Action, SequenceNumber, SequenceValue},
     };
-    use serde_json::{json};
+    use serde_json::json;
 
     fn json_to_cbor(value: serde_json::Value) -> ciborium::value::Value {
         let mut writer: Vec<u8> = Vec::new();

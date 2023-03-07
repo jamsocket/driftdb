@@ -1,7 +1,8 @@
+use ciborium::value::Value;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+
 use crate::{StoreInstruction, Store};
-use ciborium::value::Value;
 
 pub mod key_seq_pair;
 
