@@ -1,5 +1,5 @@
 use crate::types::{Action, Key, SequenceNumber, SequenceValue};
-use serde_json::Value;
+use ciborium::value::Value;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Default)]
@@ -22,7 +22,7 @@ pub enum DeleteInstruction {
     DeleteUpTo(SequenceNumber),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PushInstruction {
     /// Push the given value to the end of the subject.
     Push(SequenceValue),

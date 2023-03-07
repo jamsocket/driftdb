@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::fmt::Display;
+use ciborium::value::Value;
 
 pub mod key_seq_pair;
 
@@ -64,7 +64,7 @@ pub enum Action {
     Compact { seq: SequenceNumber },
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageToDatabase {
     Push {
@@ -89,13 +89,13 @@ pub enum MessageToDatabase {
     },
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct SequenceValue {
     pub value: Value,
     pub seq: SequenceNumber,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageFromDatabase {
     Push {
