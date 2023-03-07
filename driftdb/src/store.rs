@@ -1,7 +1,7 @@
 use crate::types::{Action, Key, SequenceNumber, SequenceValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use ciborium::value::Value;
+use serde_cbor::Value;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]

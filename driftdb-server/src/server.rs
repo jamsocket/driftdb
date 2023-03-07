@@ -52,10 +52,10 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
                     }
                     axum::extract::ws::Message::Pong(_) => {}
                     axum::extract::ws::Message::Binary(bytes) => {                        
-                        let mm: Result<ciborium::value::Value, _> = ciborium::de::from_reader(bytes.as_slice());
-                        tracing::info!("h1 {:?}", mm);
+                        // let mm: Result<serde_cbor::Value, _> = ciborium::de::from_reader(bytes.as_slice());
+                        // tracing::info!("h1 {:?}", mm);
 
-                        let msg = ciborium::de::from_reader(bytes.as_slice())?;
+                        let msg = serde_cbor::from_slice(bytes.as_slice())?;
                         return Ok(Some(msg));
                     }
                     axum::extract::ws::Message::Text(msg) => {
@@ -70,10 +70,10 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Out
 
     pub async fn send(&mut self, msg: Outbound) -> Result<()> {
         if self.binary {
-            let mut writer = Vec::new();
-            ciborium::ser::into_writer(&msg, &mut writer)?;
+            let v = serde_cbor::to_vec(&msg)?;
+
             self.socket
-                .send(axum::extract::ws::Message::Binary(writer))
+                .send(axum::extract::ws::Message::Binary(v))
                 .await?;
             return Ok(());
         } else {
