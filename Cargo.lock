@@ -373,6 +373,7 @@ name = "driftdb-worker"
 version = "0.1.4"
 dependencies = [
  "cfg-if 0.1.10",
+ "ciborium",
  "console_error_panic_hook",
  "driftdb",
  "getrandom",
