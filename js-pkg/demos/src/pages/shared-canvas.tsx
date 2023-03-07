@@ -131,11 +131,14 @@ function SharedCanvas() {
 
   return (
     <div>
-      <StatusIndicator />
-      <div style={{ marginTop: 50 }}>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-800">DriftDB - Shared Canvas Demo</h1>
+        <StatusIndicator />
+      </div>
+      <div className="mt-8">
         <canvas
           ref={setContext}
-          style={{ backgroundColor: '#3d4149', borderRadius: 15, width: '100%', height: 800 }}
+          className="w-full bg-gray-800 rounded-xl h-full"
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
