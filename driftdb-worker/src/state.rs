@@ -1,5 +1,5 @@
 use crate::Configuration;
-use ciborium::value::Value;
+use serde_cbor::Value;
 use driftdb::{
     types::{key_seq_pair::KeyAndSeq, SequenceNumber, SequenceValue},
     ApplyResult, Database, DeleteInstruction, Key, PushInstruction, Store, ValueLog,
@@ -128,12 +128,10 @@ impl PersistedDb {
                             KeyAndSeq::new(apply_result.key.clone(), sequence_value.seq)
                                 .to_string();
 
-                        let mut buffer: Vec<u8> = Vec::new();
-                        let storage_value =
-                            ciborium::ser::into_writer(&sequence_value.value, &mut buffer).unwrap();
+                        let buffer = serde_cbor::to_vec(&sequence_value.value).unwrap();
 
                         storage
-                            .put(&storage_key, &storage_value)
+                            .put(&storage_key, &buffer)
                             .await
                             .expect("Error putting value in storage.");
                     }

@@ -136,7 +136,7 @@ test("Send and receive UInt8Array.", async () => {
         action: {type: "append"},
         value: {
             abc: "derp",
-            v: new Uint8Array([1, 2, 3]).buffer,
+            v: new Uint8Array([1, 2, 3]),
         }
     })
 

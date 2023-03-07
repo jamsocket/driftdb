@@ -1,4 +1,4 @@
-use ciborium::value::Value;
+use serde_cbor::Value;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 

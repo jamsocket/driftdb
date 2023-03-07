@@ -171,11 +171,8 @@ mod tests {
     };
     use serde_json::json;
 
-    fn json_to_cbor(value: serde_json::Value) -> ciborium::value::Value {
-        let mut writer: Vec<u8> = Vec::new();
-        ciborium::ser::into_writer(&value, &mut writer).unwrap();
-        let value = ciborium::de::from_reader(writer.as_slice()).unwrap();
-        value
+    fn json_to_cbor(value: serde_json::Value) -> serde_cbor::Value {
+        serde_cbor::value::to_value(&value).unwrap()
     }
 
     fn subscribe(conn: &Connection, key: &str) {
