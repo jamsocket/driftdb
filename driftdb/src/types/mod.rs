@@ -1,5 +1,5 @@
-use serde_cbor::Value;
 use serde::{Deserialize, Serialize};
+use serde_cbor::Value;
 use std::fmt::Display;
 
 use crate::{StoreInstruction, Store};
