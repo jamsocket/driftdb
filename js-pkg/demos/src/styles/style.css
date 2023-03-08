@@ -1,10 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
 
-body {
-    font-family: Inter, sans-serif;
+html {
+  @apply h-full bg-gray-100;
 }
 
-#main {
-    max-width: 800px;
-    margin: 0 auto;
+body {
+  @apply h-full;
+  font-family: Inter, sans-serif;
 }

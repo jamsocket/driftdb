@@ -1,5 +1,6 @@
 import { DRIFTDB_URL } from '@/config'
 import Head from 'next/head'
+import { XMarkIcon } from '@heroicons/react/20/solid'
 import { DriftDBProvider, RoomQRCode, StatusIndicator, useSharedReducer, useUniqueClientId } from 'driftdb-react'
 
 enum Player {
@@ -30,6 +31,10 @@ const INITIAL_STATE: GameState = {
     oPlayer: null,
     winner: null,
 }
+
+function classNames(...classes: string[]) {
+    return classes.filter(Boolean).join(' ')
+  }
 
 function ticTacToeReducer(state: GameState, action: ActionType): GameState {
     switch (action.type) {
@@ -100,9 +105,19 @@ function gameStateDescription(state: GameState) {
 }
 
 function Square({ value, onClick, disabled }: { value: number, onClick: () => void, disabled: boolean }) {
-    return <button className="square" onClick={onClick} disabled={disabled} style={{ width: 30, height: 30, background: "none", border: "1px solid #aaa", borderRadius: 3 }}>
-        {value === Player.X ? 'X' : value === Player.O ? 'O' : '_'}
-    </button>
+    return (
+        <div
+            className={classNames(disabled ? "cursor-not-allowed" : "cursor-pointer", "w-20 h-20 p-3 border border-gray-600")}
+            onClick={() => { disabled ? null : onClick()}}
+        >
+            {value === Player.X ?
+                <XMarkIcon className="h-full w-full" /> :
+                value === Player.O ?
+                    <CircleIcon className="h-full w-full" /> :
+                    ''
+            }
+        </div>
+    )
 }
 
 function TicTacToeDemo() {
@@ -124,39 +139,40 @@ function TicTacToeDemo() {
         })
     }
 
-    return <div>
-        <h1>DriftDB Tic Tac Toe Demo</h1>
+    return <div className="mb-8 mt-4 inline-flex flex-col">
+        <div className="mb-4">
+            <p className="text-sm mb-3 text-gray-600 uppercase text-center py-1 bg-gray-200 border border-gray-300 rounded-md">{gameStateDescription(state)}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <h2>Game</h2>
-
-            <p>{gameStateDescription(state)}</p>
-
-            <div>
-                <div>
+            <div className="flex-col border border-gray-500 inline-flex">
+                <div className="flex flex-row">
                     <Square value={state.board[0]} onClick={() => playMove(0)} disabled={state.winner !== null} />
                     <Square value={state.board[1]} onClick={() => playMove(1)} disabled={state.winner !== null} />
                     <Square value={state.board[2]} onClick={() => playMove(2)} disabled={state.winner !== null} />
                 </div>
-                <div>
+                <div className="flex flex-row">
                     <Square value={state.board[3]} onClick={() => playMove(3)} disabled={state.winner !== null} />
                     <Square value={state.board[4]} onClick={() => playMove(4)} disabled={state.winner !== null} />
                     <Square value={state.board[5]} onClick={() => playMove(5)} disabled={state.winner !== null} />
                 </div>
-                <div>
+                <div className="flex flex-row">
                     <Square value={state.board[6]} onClick={() => playMove(6)} disabled={state.winner !== null} />
                     <Square value={state.board[7]} onClick={() => playMove(7)} disabled={state.winner !== null} />
                     <Square value={state.board[8]} onClick={() => playMove(8)} disabled={state.winner !== null} />
                 </div>
             </div>
         </div>
-        <p>
-            <button onClick={reset}>Reset</button>
-        </p>
+
+        <button
+            type="button"
+            onClick={reset}
+            className="rounded bg-gray-50 py-1.5 px-3 text-md text-gray-800 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-100"
+        >
+            Reset
+        </button>
     </div>
 }
 
-export default function Counter() {
+export default function TicTacToe() {
     return (
         <>
             <Head>
@@ -165,11 +181,23 @@ export default function Counter() {
             </Head>
             <div>
                 <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
-                    <StatusIndicator />
+                    <h1 className="text-2xl font-bold text-gray-800">DriftDB - Tic Tac Toe Demo</h1>
                     <TicTacToeDemo />
-                    <RoomQRCode />
+                    <div className="flex flex-col gap-4 sm:max-w-sm border border-gray-300 bg-gray-200 p-6 rounded-3xl">
+                        <StatusIndicator />
+                        <div className="overflow-hidden rounded-3xl">
+                            <RoomQRCode />
+                        </div>
+                    </div>
                 </DriftDBProvider>
             </div>
         </>
+    )
+}
+function CircleIcon({ className }: { className: string }) {
+    return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 28 28" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M23 14a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
     )
 }
