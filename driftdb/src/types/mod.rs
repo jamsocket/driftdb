@@ -97,7 +97,7 @@ pub struct SequenceValue {
     pub seq: SequenceNumber,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum ReplicaInstruction {
     StoreInstruction(StoreInstruction),
     InitInstruction(Store),

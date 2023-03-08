@@ -106,7 +106,7 @@ async fn handle_socket(
 
     let conn = if connection_spec.debug {
         database.connect_debug(callback)
-    } else if replica {
+    } else if connection_spec.replica {
         database.connect_replica(callback)
     } else {
         database.connect(callback)

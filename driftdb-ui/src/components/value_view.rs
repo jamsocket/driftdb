@@ -1,19 +1,29 @@
-use serde_json::Value;
+use serde_cbor::value::Value;
 use yew::{function_component, Properties, Html, html};
 
+fn render_key(value: &Value) -> Html {
+    match value {
+        Value::Text(text) => html! {
+            <>
+                <span class="text-gray-400">{'"'}</span>
+                <span class="text-blue-600">{text}</span>
+                <span class="text-gray-400">{'"'}</span>
+            </>
+        },
+        _ => html! {<span>{"(key)"}</span>},
+    }
+}
 
 fn render_value(value: &Value) -> Html {
     match value {
-        Value::Object(object) => html! {
+        Value::Map(object) => html! {
             <>
                 <span class="text-gray-400">{'{'}</span>
                 <ul>
                 {for object.iter().enumerate().map(|(i, (key, value))| {
                     html! {
                         <li class="pl-5">
-                            <span class="text-gray-400">{'"'}</span>
-                            <span class="text-blue-600">{key}</span>
-                            <span class="text-gray-400">{'"'}</span>
+                            {render_key(key)}
                             <span class="text-gray-400">{": "}</span>
                             {render_value(value)}
                             {
@@ -33,7 +43,11 @@ fn render_value(value: &Value) -> Html {
             </>
         },
 
-        Value::Number(number) => html! {
+        Value::Integer(number) => html! {
+            <span class="text-yellow-600">{number}</span>
+        },
+
+        Value::Float(number) => html! {
             <span class="text-yellow-600">{number}</span>
         },
 
@@ -60,7 +74,7 @@ fn render_value(value: &Value) -> Html {
             </>
         },
 
-        Value::String(value) => html! {
+        Value::Text(value) => html! {
             <>
                 <span class="text-gray-400">{'"'}</span>
                 <span class="text-green-600">{value}</span>
@@ -74,6 +88,10 @@ fn render_value(value: &Value) -> Html {
 
         Value::Null => html! {
             <span class="text-red-400">{"null"}</span>
+        },
+
+        _ => html! {
+            <span>{"(unknown)"}</span>
         },
     }
 }

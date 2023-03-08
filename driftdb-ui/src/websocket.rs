@@ -12,11 +12,6 @@ pub struct WebSocketConnection<Inbound: DeserializeOwned, Outbound: Serialize> {
     _ph_o: std::marker::PhantomData<Outbound>,
 }
 
-enum Message {
-    Text(String),
-    Bytes(Vec<u8>),
-}
-
 impl<Inbound: DeserializeOwned, Outbound: Serialize> WebSocketConnection<Inbound, Outbound> {
     pub fn new<F>(url: &str, callback: F) -> Result<Self>
     where
@@ -28,14 +23,16 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> WebSocketConnection<Inbound
 
         let message_handler = Closure::<dyn FnMut(_)>::wrap(Box::new(move |e: MessageEvent| {
             if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
-                // let array = js_sys::Uint8Array::new(&abuf);
-                // let array = array.to_vec();
+                let array = js_sys::Uint8Array::new(&abuf);
+                let array = array.to_vec();
 
                 log::info!("message event, received bytes: {:?}", abuf);
-            } else if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
-                let txt = txt.as_string().unwrap();
 
-                callback(serde_json::from_str(&txt).unwrap());
+                let msg = serde_cbor::from_slice(array.as_slice()).unwrap();
+                callback(msg);
+
+            } else if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
+                log::info!("message event, received text: {:?}", txt);
             } else {
                 log::warn!("message event, received Unknown: {:?}", e.data());
             }
@@ -52,7 +49,7 @@ impl<Inbound: DeserializeOwned, Outbound: Serialize> WebSocketConnection<Inbound
     }
 
     pub fn send(&self, message: &Outbound) {
-        let txt = serde_json::to_string(message).unwrap();
-        self.socket.send_with_str(&txt).unwrap();
+        let v = serde_cbor::to_vec(message).unwrap();
+        self.socket.send_with_u8_array(&v).unwrap();
     }
 }

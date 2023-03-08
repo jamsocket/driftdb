@@ -1,15 +1,14 @@
 use crate::types::{Action, Key, SequenceNumber, SequenceValue};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use serde_cbor::Value;
 use std::collections::{HashMap, VecDeque};
 
-#[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ValueLog {
     pub values: VecDeque<SequenceValue>,
 }
 
-#[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Store {
     subjects: HashMap<Key, ValueLog>,
     sequence_number: SequenceNumber,
@@ -24,7 +23,7 @@ pub enum DeleteInstruction {
     DeleteUpTo(SequenceNumber),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum PushInstruction {
     /// Push the given value to the end of the subject.
     Push(SequenceValue),
@@ -33,7 +32,7 @@ pub enum PushInstruction {
     PushStart(SequenceValue),
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct StoreInstruction {
     pub key: Key,
 

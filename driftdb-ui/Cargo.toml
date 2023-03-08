@@ -14,6 +14,6 @@ web-sys = { version = "0.3.61", features = ["WebSocket"] }
 wasm-bindgen = "0.2.84"
 anyhow = "1.0.69"
 js-sys = "0.3.61"
-serde_json = "1.0.93"
 log = "0.4.17"
 console_log = "0.2.1"
+serde_cbor = "0.11.2"

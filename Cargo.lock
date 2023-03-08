@@ -334,7 +334,7 @@ dependencies = [
  "js-sys",
  "log",
  "serde",
- "serde_json",
+ "serde_cbor",
  "wasm-bindgen",
  "web-sys",
  "yew",
