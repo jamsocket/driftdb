@@ -13,4 +13,5 @@ cd ../
 cd js-pkg/
 
 npm i
+npx turbo build
 npx turbo test
