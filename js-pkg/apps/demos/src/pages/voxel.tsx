@@ -1,4 +1,4 @@
-import { DRIFTDB_URL } from '@/config'
+import { DRIFTDB_URL } from '../config'
 import { OrbitControls } from '@react-three/drei'
 import { Canvas, ThreeEvent } from '@react-three/fiber'
 import { DriftDBProvider, usePresence, useSharedReducer } from 'driftdb-react'

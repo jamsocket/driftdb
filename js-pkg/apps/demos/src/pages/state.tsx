@@ -1,4 +1,4 @@
-import { DRIFTDB_URL } from '@/config'
+import { DRIFTDB_URL } from '../config'
 import Head from 'next/head'
 import { Switch } from '@headlessui/react'
 import { DriftDBProvider, RoomQRCode, StatusIndicator, useSharedState } from 'driftdb-react'

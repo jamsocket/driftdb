@@ -1,4 +1,4 @@
-import { DRIFTDB_URL } from '@/config'
+import { DRIFTDB_URL } from '../config'
 import Head from 'next/head'
 import { MinusIcon, PlusIcon } from '@heroicons/react/20/solid'
 import { DriftDBProvider, RoomQRCode, StatusIndicator, useSharedReducer } from 'driftdb-react'

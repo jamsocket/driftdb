@@ -1,7 +1,5 @@
+import { Api, ConnectionStatus, DbConnection, PresenceListener, Reducer, RoomResult, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { DbConnection, PresenceListener, Reducer, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb"
-import { Api, RoomResult } from "driftdb/dist/api"
-import { ConnectionStatus } from "driftdb/dist/types";
 
 const ROOM_ID_KEY = "_driftdb_room"
 
@@ -81,7 +79,7 @@ export function useUniqueClientId(): string {
     }
 
     if (!currentId.current) {
-       currentId.current = uniqueClientId()
+        currentId.current = uniqueClientId()
     }
     return currentId.current
 }
@@ -158,7 +156,7 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
     const db = useDatabase()
     const clientId = useUniqueClientId()
     const [presence, setPresence] = useState<Record<string, WrappedPresenceMessage<T>>>({})
-    
+
     const presenceListener = useRef<PresenceListener<T>>()
     if (presenceListener.current === undefined) {
         presenceListener.current = new PresenceListener({
@@ -171,7 +169,7 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
     }
 
     presenceListener.current.updateState(value)
-    
+
     return presence
 }
 
@@ -192,7 +190,7 @@ export function StatusIndicator() {
             DriftDB status: <span style={{ color, fontWeight: 'bold' }}>{status.connected ? "Connected" : "Disconnected"}</span>
             {
                 status.connected ? <>
-                    {" "}<span style={{fontSize: '70%', color: '#aaa'}}>
+                    {" "}<span style={{ fontSize: '70%', color: '#aaa' }}>
                         <a target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#aaa' }} href={status.debugUrl}>(ui)</a>
                         ({latencyStr}ms)
                     </span>

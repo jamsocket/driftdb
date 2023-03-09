@@ -1,12 +1,14 @@
+import * as CBOR from 'cbor-web'
 import { LatencyTest } from "./latency"
-import { ConnectionStatus, MessageFromDb, MessageToDb, SequenceValue, Key } from "./types"
-export { PresenceListener } from "./presence"
-export type { WrappedPresenceMessage, PresenceMessage } from "./presence"
-export { StateListener } from "./state"
-export { Reducer } from "./reducer"
-export { Api, RoomResult } from "./api"
+import { ConnectionStatus, Key, MessageFromDb, MessageToDb, SequenceValue } from "./types"
+export { Api } from "./api"
+export type { RoomResult } from "./api"
 export { HttpConnection } from "./http"
-import * as CBOR from 'cbor-web';
+export { PresenceListener } from "./presence"
+export type { PresenceMessage, WrappedPresenceMessage } from "./presence"
+export { Reducer } from "./reducer"
+export { StateListener } from "./state"
+export type { ConnectionStatus, Key, MessageFromDb, MessageToDb, SequenceValue } from "./types"
 
 const CLIENT_ID_KEY = "_driftdb_client_id"
 
@@ -75,7 +77,7 @@ export class DbConnection {
         if (cbor) {
             dbUrl = dbUrl + "?cbor=true"
         }
-        
+
         this.dbUrl = dbUrl
         this.cbor = cbor
 
@@ -132,7 +134,7 @@ export class DbConnection {
             } else {
                 message = JSON.parse(event.data)
             }
-            
+
             this.messageListener.dispatch(message)
 
             switch (message.type) {

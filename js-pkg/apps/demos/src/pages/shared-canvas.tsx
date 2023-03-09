@@ -1,4 +1,4 @@
-import { DRIFTDB_URL } from '@/config'
+import { DRIFTDB_URL } from '../config'
 import React, { useState, useCallback, useEffect } from 'react'
 import { useSharedReducer, StatusIndicator, useUniqueClientId, usePresence, DriftDBProvider } from 'driftdb-react'
 
