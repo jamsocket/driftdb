@@ -2,8 +2,6 @@
 
 set -e
 
-npm ci || npm ci # long story
-
 cd driftdb-server
 
 killall driftdb-server || true
@@ -12,7 +10,7 @@ cargo run &
 
 cd ../
 
-cd js-pkg/tests
+cd js-pkg/
 
-npm test
-
+npm i
+npx turbo test
