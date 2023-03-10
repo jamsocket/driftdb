@@ -1,5 +1,11 @@
 {
     "extends": "../tsconfig/base.json",
+    "compilerOptions": {
+        "lib": ["esnext", "dom"],
+        "composite": true,
+        "outDir": "dist",
+        "rootDir": "src",
+    },
     "include": [
         "."
     ],
@@ -7,5 +13,5 @@
         "dist",
         "build",
         "node_modules"
-    ]
+    ],
 }

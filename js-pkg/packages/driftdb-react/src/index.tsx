@@ -94,7 +94,7 @@ export function useUniqueClientId(): string {
   if (!currentId.current) {
     currentId.current = uniqueClientId()
   }
-  return currentId.current
+  return currentId.current!
 }
 
 export function useSharedReducer<State, Action>(

@@ -19,6 +19,34 @@ const config = {
     locales: ['en'],
   },
 
+  plugins: [
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        id: 'vanilla-docs',
+        out: 'vanilla-api',
+        sidebar: {
+          categoryLabel: 'Vanilla JS API',
+        },
+        entryPoints: ['../js-pkg/packages/driftdb/src/index.ts'],
+        tsconfig: '../js-pkg/packages/driftdb/tsconfig.json',
+      },
+    ],
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        id: 'react-docs',
+        out: 'react-api',
+        sidebar: {
+          categoryLabel: 'React API',
+        },
+        entryPoints: ['../js-pkg/packages/driftdb-react/src/index.tsx'],
+        tsconfig: '../js-pkg/packages/driftdb-react/tsconfig.json',
+      },
+    ],
+  ],
+
+
   presets: [
     [
       'classic',
