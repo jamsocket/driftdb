@@ -10,39 +10,68 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ')
 }
 
-function NavLink({ href, curRoute, children }: { href: string, curRoute: string, children: JSX.Element | string }) {
+function NavLink({
+  href,
+  curRoute,
+  children
+}: {
+  href: string
+  curRoute: string
+  children: JSX.Element | string
+}) {
   const classes = classNames(
     href === curRoute
       ? 'bg-gray-900 text-white'
       : 'text-gray-300 hover:bg-gray-700 hover:text-white',
     'group flex items-center rounded-md px-2 py-2 text-base font-medium cursor-pointer'
   )
-  return <Link href={href}><li className={classes}>{children}</li></Link>
+  return (
+    <Link href={href}>
+      <li className={classes}>{children}</li>
+    </Link>
+  )
 }
 
-function Nav({ isDesktop, curRoute }: { isDesktop?: boolean, curRoute: string }) {
-  return <div className={classNames(isDesktop ? 'flex flex-col' : 'h-0', 'flex-1 overflow-y-auto pt-5 pb-4')}>
-    <div className="flex flex-shrink-0 items-center px-4 gap-4">
-      <Logo className="h-8 w-8" /><h1 className="text-gray-200 text-lg font-extrabold">DriftDB Demos</h1>
+function Nav({ isDesktop, curRoute }: { isDesktop?: boolean; curRoute: string }) {
+  return (
+    <div
+      className={classNames(
+        isDesktop ? 'flex flex-col' : 'h-0',
+        'flex-1 overflow-y-auto pt-5 pb-4'
+      )}
+    >
+      <div className="flex flex-shrink-0 items-center px-4 gap-4">
+        <Logo className="h-8 w-8" />
+        <h1 className="text-gray-200 text-lg font-extrabold">DriftDB Demos</h1>
+      </div>
+      <nav className={classNames(isDesktop ? 'text-base' : 'flex-1 text-sm', 'mt-5 px-2')}>
+        <h3 className="text-gray-500 text-xs uppercase">Basic</h3>
+        <ul>
+          <NavLink href="/state" curRoute={curRoute}>
+            Shared State
+          </NavLink>
+          <NavLink href="/counter" curRoute={curRoute}>
+            Counter
+          </NavLink>
+          <NavLink href="/tictactoe" curRoute={curRoute}>
+            Tic Tac Toe
+          </NavLink>
+        </ul>
+        <h3 className="text-gray-500 text-xs uppercase mt-6">Advanced</h3>
+        <ul>
+          <NavLink href="/shared-canvas" curRoute={curRoute}>
+            Shared Canvas
+          </NavLink>
+          <NavLink href="/voxel" curRoute={curRoute}>
+            Voxel Editor
+          </NavLink>
+        </ul>
+      </nav>
     </div>
-    <nav className={classNames(isDesktop ? 'text-base' : 'flex-1 text-sm', 'mt-5 px-2')}>
-      <h3 className="text-gray-500 text-xs uppercase">Basic</h3>
-      <ul>
-        <NavLink href="/state" curRoute={curRoute}>Shared State</NavLink>
-        <NavLink href="/counter" curRoute={curRoute}>Counter</NavLink>
-        <NavLink href="/tictactoe" curRoute={curRoute}>Tic Tac Toe</NavLink>
-      </ul>
-      <h3 className="text-gray-500 text-xs uppercase mt-6">Advanced</h3>
-      <ul>
-        <NavLink href="/shared-canvas" curRoute={curRoute}>Shared Canvas</NavLink>
-        <NavLink href="/voxel" curRoute={curRoute}>Voxel Editor</NavLink>
-      </ul>
-    </nav>
-  </div>
-
+  )
 }
 
-function SidebarLayout({ curRoute, children }: { curRoute: string, children: JSX.Element }) {
+function SidebarLayout({ curRoute, children }: { curRoute: string; children: JSX.Element }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   return (
     <>
@@ -95,7 +124,9 @@ function SidebarLayout({ curRoute, children }: { curRoute: string, children: JSX
                   <Nav curRoute={curRoute} />
                 </Dialog.Panel>
               </Transition.Child>
-              <div className="w-14 flex-shrink-0">{/* Force sidebar to shrink to fit close icon */}</div>
+              <div className="w-14 flex-shrink-0">
+                {/* Force sidebar to shrink to fit close icon */}
+              </div>
             </div>
           </Dialog>
         </Transition.Root>
@@ -117,9 +148,7 @@ function SidebarLayout({ curRoute, children }: { curRoute: string, children: JSX
               <Bars3Icon className="h-6 w-6" aria-hidden="true" />
             </button>
           </div>
-          <main className="flex-1 p-8 relative z-0 h-full">
-            {children}
-          </main>
+          <main className="flex-1 p-8 relative z-0 h-full">{children}</main>
         </div>
       </div>
     </>
