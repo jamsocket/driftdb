@@ -1,7 +1,7 @@
 {
   "name": "driftdb",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs --dts",
+    "build": "tsc",
     "dev": "npm run build -- --watch"
   },
   "version": "1.0.11",
@@ -19,7 +19,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "tsup": "^6.6.3"
+    "typescript": "^4.9.5"
   },
   "bugs": {
     "url": "https://github.com/drifting-in-space/driftdb/issues"
