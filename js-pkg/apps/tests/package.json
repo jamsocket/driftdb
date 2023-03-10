@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "bun-types": "^0.5.7",
-    "driftdb": "*"
+    "driftdb-internal": "*"
   },
   "devDependencies": {
     "bun": "^0.5.7"
