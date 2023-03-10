@@ -1,6 +1,5 @@
 import * as React from 'react'
-import { useWebRTCConnection, useWebRTCMessagingChannel } from './webrtc.js'
-import { useDriftDBSignalingChannel } from './driftdbutils.jsx'
+import { useWebRTCMessagingChannel } from './webrtc.js'
 
 const msgToJsx = (message) => (
   <li key={message.id}>
@@ -22,6 +21,7 @@ export const Chat = ({ myId, withId }) => {
         onSubmit={(e) => {
           e.preventDefault()
           const text = e.target[0].value
+	  e.target[0].value = ""
           send(text)
           dispatch({ id: crypto.randomUUID(), text })
         }}
