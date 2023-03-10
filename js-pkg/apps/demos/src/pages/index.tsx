@@ -28,11 +28,11 @@ const demos = [
     href: '/voxel',
     description: 'Edit voxels in a shared environment.'
   },
-    {
-	title: 'WebRTC Chat',
-	href: '/webrtc-demo',
-	description: 'simple chat with webrtc datachannels, using driftdb for signaling'
-    }
+  {
+    title: 'WebRTC Chat',
+    href: '/webrtc-demo',
+    description: 'simple chat with webrtc datachannels, using driftdb for signaling'
+  }
 ]
 
 function classNames(...classes: string[]) {
