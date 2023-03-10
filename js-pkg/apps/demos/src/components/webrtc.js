@@ -45,6 +45,7 @@ export const useWebRTCConnection = (p1, p2) => {
   const isPeerPolite = p1 < p2
   let connRef = React.useRef(null)
   let makingOfferRef = React.useRef(false)
+
   React.useEffect(() => {
     console.log('newconning')
     let conn = new RTCPeerConnection({
@@ -69,11 +70,7 @@ export const useWebRTCConnection = (p1, p2) => {
     }
 
     conn.onconnectionstatechange = () => {
-      if (conn.connectionState === 'connected') {
-        setIsReady(true)
-      } else {
-        setIsReady(false)
-      }
+	console.log("current webrtc connection state: ", conn.connectionState)
     }
 
     conn.oniceconnectionstatechange = (_e) => {
