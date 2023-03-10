@@ -1,6 +1,5 @@
-import { DbConnection, StateListener, Api, RoomResult, HttpConnection } from "driftdb";
+import { DbConnection, StateListener, Api, RoomResult, HttpConnection, SequenceValue } from "driftdb-internal";
 import { expect, test } from "bun:test";
-import { SequenceValue } from "driftdb/dist/types";
 
 // "localhost" breaks on some versions of node because of this
 // https://github.com/nodejs/undici/issues/1248#issuecomment-1214773044
