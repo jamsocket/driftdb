@@ -10,7 +10,8 @@ const demos = [
   {
     title: 'Shared Reducer',
     href: '/counter',
-    description: 'Let multiple clients increment and decrement a shared counter with useSharedReducer.'
+    description:
+      'Let multiple clients increment and decrement a shared counter with useSharedReducer.'
   },
   {
     title: 'Tic Tac Toe',
@@ -51,7 +52,9 @@ export default function Demos() {
                 demoIdx === 0 ? 'rounded-tl-lg rounded-tr-lg sm:rounded-tr-none' : '',
                 demoIdx === 1 ? 'sm:rounded-tr-lg' : '',
                 demoIdx === demos.length - 2 ? 'sm:rounded-bl-lg' : '',
-                demoIdx === demos.length - 1 ? 'rounded-bl-lg rounded-br-lg sm:rounded-bl-none' : '',
+                demoIdx === demos.length - 1
+                  ? 'rounded-bl-lg rounded-br-lg sm:rounded-bl-none'
+                  : '',
                 'group relative bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500'
               )}
             >
@@ -63,9 +66,7 @@ export default function Demos() {
                     {demo.title}
                   </Link>
                 </h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  {demo.description}
-                </p>
+                <p className="mt-2 text-sm text-gray-500">{demo.description}</p>
               </div>
               <span
                 className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"

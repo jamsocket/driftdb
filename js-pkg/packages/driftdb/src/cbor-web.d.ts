@@ -1,1 +1,1 @@
-declare module 'cbor-web';
+declare module 'cbor-web'

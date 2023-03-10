@@ -1,17 +1,23 @@
 import { DRIFTDB_URL } from '../config'
 import React, { useState, useCallback, useEffect } from 'react'
-import { useSharedReducer, StatusIndicator, useUniqueClientId, usePresence, DriftDBProvider } from 'driftdb-react'
+import {
+  useSharedReducer,
+  StatusIndicator,
+  useUniqueClientId,
+  usePresence,
+  DriftDBProvider
+} from 'driftdb-react'
 
 type Presence = { name: string; userColor: string; mousePosition: [number, number] | null }
-type Shape = { x: number, y: number, w: number, h: number, color: string, id: number }
+type Shape = { x: number; y: number; w: number; h: number; color: string; id: number }
 type SharedCanvas = Shape[]
 
-type CreateShapeAction = { type: 'create-shape', shape: Shape }
-type UpdateShapeAction = { type: 'update-shape', shape: Shape }
+type CreateShapeAction = { type: 'create-shape'; shape: Shape }
+type UpdateShapeAction = { type: 'update-shape'; shape: Shape }
 type Actions = CreateShapeAction | UpdateShapeAction
 
 // each user will have their own slice of the color spectrum
-const HUE_OFFSET = Math.random() * 360 | 0
+const HUE_OFFSET = (Math.random() * 360) | 0
 const USER_COLOR = randomColor()
 
 function SharedCanvas() {
@@ -22,24 +28,28 @@ function SharedCanvas() {
   const [dragStart, setDragStart] = useState<[number, number] | null>(null)
   const [shapeStart, setShapeStart] = useState<[number, number] | null>(null)
   const [mousePosition, setMousePosition] = useState<[number, number] | null>(null)
-  const [sharedCanvas, dispatch] = useSharedReducer<SharedCanvas, Actions>('shared-canvas', (state, action) => {
-    if (action.type === 'update-shape') {
-      const updatedShape = action.shape
-      const shape = state.find(s => s.id === updatedShape.id)
-      if (shape) {
-        shape.x = updatedShape.x
-        shape.y = updatedShape.y
-        shape.w = updatedShape.w
-        shape.h = updatedShape.h
+  const [sharedCanvas, dispatch] = useSharedReducer<SharedCanvas, Actions>(
+    'shared-canvas',
+    (state, action) => {
+      if (action.type === 'update-shape') {
+        const updatedShape = action.shape
+        const shape = state.find((s) => s.id === updatedShape.id)
+        if (shape) {
+          shape.x = updatedShape.x
+          shape.y = updatedShape.y
+          shape.w = updatedShape.w
+          shape.h = updatedShape.h
+        }
+        return state
+      }
+      if (action.type === 'create-shape') {
+        state.push(action.shape)
+        return state
       }
       return state
-    }
-    if (action.type === 'create-shape') {
-      state.push(action.shape)
-      return state
-    }
-    return state
-  }, [])
+    },
+    []
+  )
 
   const presence = usePresence<Presence>('users', { name: username, mousePosition, userColor })
 
@@ -109,7 +119,7 @@ function SharedCanvas() {
     const y = event.clientY - boundingClientRects.y
     setMousePosition([x, y])
 
-    const shape = sharedCanvas.find(s => s.id === selectedShape)
+    const shape = sharedCanvas.find((s) => s.id === selectedShape)
     if (!mode || !shape || !dragStart) return
     if (mode === 'dragging') {
       if (!shapeStart) throw new Error('Should be a shapeStart here')
@@ -148,18 +158,29 @@ function SharedCanvas() {
   )
 }
 
-function pointRectIntersect(x: number, y: number, rectX: number, rectY: number, rectW: number, rectH: number) {
+function pointRectIntersect(
+  x: number,
+  y: number,
+  rectX: number,
+  rectY: number,
+  rectW: number,
+  rectH: number
+) {
   return !(x < rectX || y < rectY || x > rectX + rectW || y > rectY + rectH)
 }
 
 function randomColor() {
   const h = (Math.random() * 40 + HUE_OFFSET) % 360 | 0
-  const s = Math.random() * 30 + 25 | 0
-  const l = Math.random() * 30 + 50 | 0
+  const s = (Math.random() * 30 + 25) | 0
+  const l = (Math.random() * 30 + 50) | 0
   return `hsl(${h}, ${s}%, ${l}%)`
 }
 
-function drawCanvas(ctx: CanvasRenderingContext2D, sharedCanvas: SharedCanvas, presence: ReturnType<typeof usePresence<Presence>>) {
+function drawCanvas(
+  ctx: CanvasRenderingContext2D,
+  sharedCanvas: SharedCanvas,
+  presence: ReturnType<typeof usePresence<Presence>>
+) {
   if (!ctx) return
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
