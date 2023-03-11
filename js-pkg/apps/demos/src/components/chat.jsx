@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useWebRTCMessagingChannel } from './webrtc.js'
 
 const msgToJsx = (message) => (
-  <li key={message.id}>
+  <li key={message.id} className="p-3">
     <p> {message.text} </p>
   </li>
 )
@@ -12,11 +12,11 @@ export const Chat = ({ myId, withId }) => {
   const listMyMessages = myMessages.map(msgToJsx)
   const listMessages = messages.map(msgToJsx)
   return (
-    <section>
-      <h3> sent </h3>
-      <ol>{listMyMessages}</ol>
-      <h3> received </h3>
-      <ol>{listMessages}</ol>
+    <section className="border border-green-800 p-4 w-1/2">
+      <h3 className="border text-lg px-3 font-bold"> sent </h3>
+      <ul className="border m-3">{listMyMessages}</ul>
+      <h3 className="border text-lg px-3 font-bold"> received </h3>
+      <ul className="border m-3">{listMessages}</ul>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -26,8 +26,10 @@ export const Chat = ({ myId, withId }) => {
           dispatch({ id: crypto.randomUUID(), text })
         }}
       >
-        <input type="text" name="mytext" />
-        <button type="submit"> send! </button>
+          <input className="w-3/4 focus:border-blue-500 px-3" placeholder="Enter text here" type="text" name="mytext" />
+          <button
+	      className="mx-4 border p-2 rounded-full fill-blue-500 hover:fill-green-500"
+	      type="submit"> send! </button>
       </form>
     </section>
   )

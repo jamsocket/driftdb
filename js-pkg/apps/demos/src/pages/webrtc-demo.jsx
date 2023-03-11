@@ -5,13 +5,13 @@ import { DRIFTDB_URL } from '../config'
 
 const Peers = ({ peers }) => {
     const listItems = peers.map(([sessionPeer, connPeer]) => (
-	<tr> <td className="border px-4 mx-3" > {sessionPeer} </td>
+	<tr key={connPeer}> <td className="border px-4 mx-3" > {sessionPeer} </td>
 	<td className="border px-4 mx-3"> {connPeer} </td> </tr>
     ))
     return (
 	<table className="border p-4 m-5" >
 	    <thead className="border">
-		<tr> <th colspan="2" className="border"> PeerTable </th> </tr>
+		<tr> <th colSpan="2" className="border"> PeerTable </th> </tr>
 		<tr> <th className="border mx-3"> Session ID </th> <th> Connection ID </th> </tr>
 	    </thead>
 	    <tbody>
@@ -23,9 +23,9 @@ const Peers = ({ peers }) => {
 
 const Chats = ({ myId, peers }) => {
   const listChats = peers.map(([sessionPeer, connPeer]) => (
-    <li key={connPeer}>
+    <li key={sessionPeer}>
       <h3 className="underline"> Chat with {sessionPeer} </h3>
-      <Chat myId={myId} withId={connPeer} />
+      <Chat key={connPeer} myId={myId} withId={connPeer} />
     </li>
   ))
   return <ul>{listChats}</ul>

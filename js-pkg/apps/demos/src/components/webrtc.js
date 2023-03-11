@@ -1,47 +1,40 @@
 import * as React from 'react'
-import { useDriftDBSignalingChannel } from './driftdbutils'
+import { useDriftDBSignalingChannel } from './signaling'
 
 export const useWebRTCMessagingChannel = (p1, p2) => {
-  let [setConnSetupArray] = useWebRTCConnection(p1, p2)
-  let [theyAreReady, setTheyAreReady] = React.useState(false)
-  let [messages, addMessage] = React.useReducer((state, msg) => [...state, msg], [])
   let theirdataChannelRef = React.useRef(null)
+  let [messages, addMessage] = React.useReducer((state, msg) => [...state, msg], [])
+  const connSetupArray= React.useRef([
+	(conn) => {
+	    let dataChannel = conn.createDataChannel(p1)
+	    dataChannel.onmessage = (e) => {
+		addMessage({ id: e.timeStamp, text: e.data })
+	    }
 
-  React.useEffect(() => {
-    setConnSetupArray([
-      (conn) => {
-        let dataChannel = conn.createDataChannel(p1)
-        dataChannel.onmessage = (e) => {
-          addMessage({ id: e.timeStamp, text: e.data })
-        }
-
-        conn.ondatachannel = (e) => {
-          if (e.channel.label === p2) {
-            setTheyAreReady(true)
-            theirdataChannelRef.current = e.channel
-          }
-        }
-      }
+	    conn.ondatachannel = (e) => {
+		if (e.channel.label === p2) {
+		    theirdataChannelRef.current = e.channel
+		}
+	    }
+	}
     ])
-
-    return () => {
-      setTheyAreReady(false)
-    }
-  }, [p1, p2])
+  useWebRTCConnection(p1, p2, connSetupArray.current)
 
   return [
     messages,
-    theyAreReady
-      ? theirdataChannelRef.current.send.bind(theirdataChannelRef.current)
-      : (msg) => {
-          console.log('unsent: ', msg)
-        }
+      (msg) => {
+	  try {
+	    theirdataChannelRef.current?.send(msg)
+	  } catch(e) {
+	      console.error(e)
+	      console.log("unsent: ", msg)
+	  }
+      }
   ]
 }
 
-export const useWebRTCConnection = (p1, p2) => {
+export const useWebRTCConnection = (p1, p2, connSetupArray) => {
   let [signalingMessages, setSignalingMessages, removeFromRecv] = useDriftDBSignalingChannel(p1, p2)
-  const [connSetupArray, setConnSetupArray] = React.useState([])
   const isPeerPolite = p1 < p2
   let connRef = React.useRef(null)
   let makingOfferRef = React.useRef(false)
@@ -54,6 +47,7 @@ export const useWebRTCConnection = (p1, p2) => {
 
     conn.onnegotiationneeded = async () => {
       try {
+	  console.log("sending offer");
         makingOfferRef.current = true
         await conn.setLocalDescription()
         setSignalingMessages({ type: 'offer', sdp: conn.localDescription.sdp })
@@ -82,14 +76,14 @@ export const useWebRTCConnection = (p1, p2) => {
 
     connRef.current = conn
 
-    for (let func of connSetupArray) {
+      for (let func of (connSetupArray ?? [])) {
       func(conn)
     }
 
     return () => {
       conn.close()
     }
-  }, [connSetupArray])
+  }, [])
 
   React.useEffect(() => {
     ;(async () => {
@@ -132,5 +126,5 @@ export const useWebRTCConnection = (p1, p2) => {
     })()
   }, [signalingMessages])
 
-  return [setConnSetupArray]
+  return
 }
