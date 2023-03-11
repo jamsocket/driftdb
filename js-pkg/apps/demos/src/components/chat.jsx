@@ -21,15 +21,24 @@ export const Chat = ({ myId, withId }) => {
         onSubmit={(e) => {
           e.preventDefault()
           const text = e.target[0].value
-	  e.target[0].value = ""
+          e.target[0].value = ''
           send(text)
           dispatch({ id: crypto.randomUUID(), text })
         }}
       >
-          <input className="w-3/4 focus:border-blue-500 px-3" placeholder="Enter text here" type="text" name="mytext" />
-          <button
-	      className="mx-4 border p-2 rounded-full fill-blue-500 hover:fill-green-500"
-	      type="submit"> send! </button>
+        <input
+          className="w-3/4 focus:border-blue-500 px-3"
+          placeholder="Enter text here"
+          type="text"
+          name="mytext"
+        />
+        <button
+          className="mx-4 border p-2 rounded-full fill-blue-500 hover:fill-green-500"
+          type="submit"
+        >
+          {' '}
+          send!{' '}
+        </button>
       </form>
     </section>
   )

@@ -4,32 +4,32 @@ import { useDriftDBSignalingChannel } from './signaling'
 export const useWebRTCMessagingChannel = (p1, p2) => {
   let theirdataChannelRef = React.useRef(null)
   let [messages, addMessage] = React.useReducer((state, msg) => [...state, msg], [])
-  const connSetupArray= React.useRef([
-	(conn) => {
-	    let dataChannel = conn.createDataChannel(p1)
-	    dataChannel.onmessage = (e) => {
-		addMessage({ id: e.timeStamp, text: e.data })
-	    }
+  const connSetupArray = React.useRef([
+    (conn) => {
+      let dataChannel = conn.createDataChannel(p1)
+      dataChannel.onmessage = (e) => {
+        addMessage({ id: e.timeStamp, text: e.data })
+      }
 
-	    conn.ondatachannel = (e) => {
-		if (e.channel.label === p2) {
-		    theirdataChannelRef.current = e.channel
-		}
-	    }
-	}
-    ])
+      conn.ondatachannel = (e) => {
+        if (e.channel.label === p2) {
+          theirdataChannelRef.current = e.channel
+        }
+      }
+    }
+  ])
   useWebRTCConnection(p1, p2, connSetupArray.current)
 
   return [
     messages,
-      (msg) => {
-	  try {
-	    theirdataChannelRef.current?.send(msg)
-	  } catch(e) {
-	      console.error(e)
-	      console.log("unsent: ", msg)
-	  }
+    (msg) => {
+      try {
+        theirdataChannelRef.current?.send(msg)
+      } catch (e) {
+        console.error(e)
+        console.log('unsent: ', msg)
       }
+    }
   ]
 }
 
@@ -47,7 +47,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
 
     conn.onnegotiationneeded = async () => {
       try {
-	  console.log("sending offer");
+        console.log('sending offer')
         makingOfferRef.current = true
         await conn.setLocalDescription()
         setSignalingMessages({ type: 'offer', sdp: conn.localDescription.sdp })
@@ -64,7 +64,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
     }
 
     conn.onconnectionstatechange = () => {
-	console.log("current webrtc connection state: ", conn.connectionState)
+      console.log('current webrtc connection state: ', conn.connectionState)
     }
 
     conn.oniceconnectionstatechange = (_e) => {
@@ -76,7 +76,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
 
     connRef.current = conn
 
-      for (let func of (connSetupArray ?? [])) {
+    for (let func of connSetupArray ?? []) {
       func(conn)
     }
 
