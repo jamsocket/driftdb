@@ -4,7 +4,7 @@
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
-const sourceLinkTemplate = 'https://github.com/drifting-in-space/driftdb/blob/{gitRevision}/{path}#{line}'
+const sourceLinkTemplate = 'https://github.com/drifting-in-space/driftdb/blob/{gitRevision}/{path}#L{line}'
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
