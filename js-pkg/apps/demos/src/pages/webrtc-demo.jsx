@@ -6,24 +6,20 @@ import { DRIFTDB_URL } from '../config'
 const Peers = ({ peers }) => {
   const listItems = peers.map(([sessionPeer, connPeer]) => (
     <tr key={connPeer}>
-      {' '}
       <td className="border px-4 mx-3"> {sessionPeer} </td>
-      <td className="border px-4 mx-3"> {connPeer} </td>{' '}
+      <td className="border px-4 mx-3"> {connPeer} </td>
     </tr>
   ))
   return (
     <table className="border p-4 m-5">
       <thead className="border">
         <tr>
-          {' '}
           <th colSpan="2" className="border">
-            {' '}
-            PeerTable{' '}
-          </th>{' '}
+            PeerTable
+          </th>
         </tr>
         <tr>
-          {' '}
-          <th className="border mx-3"> Session ID </th> <th> Connection ID </th>{' '}
+          <th className="border mx-3"> Session ID </th> <th> Connection ID </th>
         </tr>
       </thead>
       <tbody>{listItems}</tbody>
