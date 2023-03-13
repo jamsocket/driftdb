@@ -19,5 +19,5 @@ npm ci
 npm run build
 
 cd ${BASE_DIR}/js-pkg/apps/tests
-npm run ci
+npm ci
 npm run test
