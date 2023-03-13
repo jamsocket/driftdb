@@ -103,6 +103,7 @@ test('Test optimistic set and get.', async () => {
 
   let expecter = new CallbackExpecter<string>()
   let stateListener = new StateListener(expecter.accept, db, 'key')
+  stateListener.subscribe()
 
   stateListener.setStateOptimistic('foo')
   let result = await expecter.expect('Optimistic set not received.')
@@ -167,9 +168,11 @@ test('Test optimistic set and get.', async () => {
 
   let expecter = new CallbackExpecter<string>()
   let stateListener = new StateListener(expecter.accept, db, 'key')
+  stateListener.subscribe()
 
   let expecter2 = new CallbackExpecter<string>()
-  new StateListener(expecter2.accept, db2, 'key')
+  let stateListener2 = new StateListener(expecter2.accept, db2, 'key')
+  stateListener2.subscribe()
 
   stateListener.setStateOptimistic('foo')
   let result = await expecter.expect('Optimistic set not received.')
