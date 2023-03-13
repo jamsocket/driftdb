@@ -15,11 +15,11 @@ const ROOM_ID_KEY = '_driftdb_room'
 
 /**
  * A React component that provides a `DbConnection` to all child components.
- * 
+ *
  * @param props The props for the component.
  */
 export function DriftDBProvider(props: {
-  /** Elements under the prodider in the tree. */
+  /** Elements under the provider in the tree. */
   children: React.ReactNode
   /** The URL of the DriftDB API. */
   api: string
@@ -80,7 +80,7 @@ export const DatabaseContext = React.createContext<DbConnection | null>(null)
  * A React hook that returns a handle to the current database connection provided by the
  * nearest `DriftDBProvider` in the tree. If there is no `DriftDBProvider` in the tree,
  * throws an error.
- * 
+ *
  * @returns A handle to the current database connection.
  */
 export function useDatabase(): DbConnection {
@@ -97,10 +97,10 @@ type SetterFunction<T> = (value: T | ((v: T) => T)) => void
  * A React hook that returns the current value of a shared state variable, and a function
  * to update it. The state variable is identified by a key, which must be unique within the
  * current room.
- * 
+ *
  * @param key The key of the state variable.
  * @param initialValue The initial value of the state variable.
- * 
+ *
  * @returns A tuple containing the current value of the state variable, and a function to
  * update it.
  */
@@ -110,7 +110,7 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
 
   const stateListener = useRef<StateListener<T>>(null)
   if (stateListener.current === null) {
-    ; (stateListener as any).current = new StateListener(setInnerState, db, key)
+    ;(stateListener as any).current = new StateListener(setInnerState, db, key)
   }
 
   const setState = useCallback(
@@ -132,7 +132,7 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
 /**
  * A React hook which returns the current room ID, if any. The room ID is extracted from the
  * current URL, so it can be used outside of a `DriftDBProvider` tree.
- * 
+ *
  * @returns The current room ID, or `null` if there is no room ID in the URL.
  */
 export function useRoomIdFromUrl(): string | null {
@@ -188,7 +188,7 @@ export function RoomQRCode(): React.ReactElement {
 /**
  * A React hook that returns a unique client ID for the current client. This ID is maintained
  * in the browser’s session storage, so it is retained across page reloads.
- * 
+ *
  * @returns A unique client ID.
  */
 export function useUniqueClientId(): string {
@@ -220,7 +220,7 @@ export function useSharedReducer<State, Action, InitialValue>(
 /**
  * A React hook that returns a reducer state variable, and a function to update it. The state
  * variable is identified by a key, which must be unique within the current room.
- * 
+ *
  * @param key The key that uniquely identifies the state variable within the current room.
  * @param reducer A reducer function that will be used to update the state variable.
  * @param initialValue The initial value of the state variable (if `init` is not passed),
@@ -265,8 +265,8 @@ export function useSharedReducer<State, Action>(
  * from the current `DriftDBProvider`.
  * The result is an object with a `connected` property that is `true` if the
  * database is connected to the server. When `connected` is `true`, a `debugUrl`
- * property is also returned. 
- * 
+ * property is also returned.
+ *
  * @returns The current connection status of the database.
  */
 export function useConnectionStatus(): ConnectionStatus {
@@ -315,11 +315,11 @@ export function useLatency(): number | null {
 /**
  * A React hook that returns a map of the current presence of all clients in the current room.
  * The client also passes its own value, which will be included in the map for other clients.
- * 
+ *
  * @param key The key that uniquely identifies the presence variable within the current room.
  * @param value The value that will be included in the map for other clients.
  * @returns A map of the current presence of all clients in the current room.
-*/
+ */
 export function usePresence<T>(key: string, value: T): Record<string, WrappedPresenceMessage<T>> {
   const db = useDatabase()
   const clientId = useUniqueClientId()
