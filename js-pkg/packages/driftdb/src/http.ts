@@ -1,5 +1,10 @@
 import { MessageFromDb, MessageToDb } from './types'
 
+/**
+ * A connection to a DriftDB room over HTTP.
+ * 
+ * This is mainly used in environments where WebSockets are not available.
+ */
 export class HttpConnection {
   constructor(private httpUrl: string) {}
 

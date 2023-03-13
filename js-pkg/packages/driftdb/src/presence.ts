@@ -11,16 +11,10 @@ export type WrappedPresenceMessage<T> = {
   lastSeen: number
 }
 
-interface PresenceListenerOptions<T> {
-  initialState: T
-  db: DbConnection
-  clientId: string
-  key?: string
-  callback?: (presence: Record<string, WrappedPresenceMessage<T>>) => void
-  minPresenceInterval?: number
-  maxPresenceInterval?: number
-}
-
+/**
+ * A class that listens for presence messages and broadcasts the client's own
+ * presence messages.
+ */
 export class PresenceListener<T> {
   private state: T
   private key: string
@@ -40,7 +34,28 @@ export class PresenceListener<T> {
 
   private updateHandle: ReturnType<typeof setTimeout>
 
-  constructor(options: PresenceListenerOptions<T>) {
+  constructor(options: {
+    /** Initial state of the client's own presence. */
+    initialState: T
+
+    /** Connection to the DriftDB room. */
+    db: DbConnection
+
+    /** Client ID. */
+    clientId: string
+
+    /** Key to listen for presence messages on (defaults to `__presence`). */
+    key?: string
+
+    /** Callback to call when the presence of any peer changes. */
+    callback?: (presence: Record<string, WrappedPresenceMessage<T>>) => void
+
+    /** Minimum interval between presence updates (defaults to 20 ms). */
+    minPresenceInterval?: number
+
+    /** Maximum interval between presence updates (defaults to 1 second). */
+    maxPresenceInterval?: number
+  }) {
     this.nextUpdate = Date.now()
 
     this.state = options.initialState
@@ -107,6 +122,12 @@ export class PresenceListener<T> {
     }, this.maxPresenceInterval)
   }
 
+  /**
+   * Update the client's own presence state.
+   * 
+   * This is debounced locally, so if it is called multiple times in a short
+   * period of time, only the last call will be sent.
+   */
   updateState(value: T) {
     if (JSON.stringify(value) === JSON.stringify(this.state)) {
       return
