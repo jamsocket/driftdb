@@ -32,7 +32,7 @@ export class StateListener<T> {
   subscribe() {
     this.db.subscribe(this.key, (value: SequenceValue) => {
       let wv = value.value as WrappedValue
-      if (wv.id !== this.randId) {
+      if (wv.i !== this.randId) {
         this.callback(wv.v as T)
       }
     })
@@ -48,7 +48,7 @@ export class StateListener<T> {
       clearTimeout(this.debounceTimeout)
       this.debounceTimeout = null
     }
-    const v: WrappedValue = { v: this.lastValue, id: this.randId }
+    const v: WrappedValue = { v: this.lastValue, i: this.randId }
     this.db?.send({
       type: 'push',
       action: { type: 'replace' },
