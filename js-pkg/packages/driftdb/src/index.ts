@@ -12,67 +12,29 @@ export type { ConnectionStatus, Key, MessageFromDb, MessageToDb, SequenceValue }
 
 const CLIENT_ID_KEY = '_driftdb_client_id'
 
-export class EventListener<T> {
-  listeners: Array<(event: T) => void> = []
-
-  addListener(listener: (event: T) => void) {
-    this.listeners.push(listener)
-  }
-
-  removeListener(listener: (event: T) => void) {
-    this.listeners = this.listeners.filter((l) => l !== listener)
-  }
-
-  dispatch(event: T) {
-    this.listeners.forEach((l) => l(event))
-  }
-}
-
-export class SubscriptionManager<T> {
-  subscriptions: Map<string, EventListener<T>> = new Map()
-
-  subscribe(key: Key, listener: (event: T) => void) {
-    if (!this.subscriptions.has(key)) {
-      this.subscriptions.set(key, new EventListener())
-    }
-
-    const subscription = this.subscriptions.get(key)!
-    subscription.addListener(listener)
-  }
-
-  unsubscribe(subject: Key, listener: (event: T) => void) {
-    const key = JSON.stringify(subject)
-    if (!this.subscriptions.has(key)) {
-      return
-    }
-
-    const subscription = this.subscriptions.get(key)!
-    subscription.removeListener(listener)
-  }
-
-  dispatch(key: Key, event: T) {
-    if (!this.subscriptions.has(key)) {
-      return
-    }
-
-    const subscription = this.subscriptions.get(key)!
-    subscription.dispatch(event)
-  }
-}
-
+/**
+ * A connection to a DriftDB room.
+ */
 export class DbConnection {
   connection: WebSocket | null = null
   status: ConnectionStatus = { connected: false }
-  public statusListener = new EventListener<ConnectionStatus>()
-  public messageListener = new EventListener<MessageFromDb>()
+  statusListener = new EventListener<ConnectionStatus>()
+  messageListener = new EventListener<MessageFromDb>()
   subscriptions = new SubscriptionManager<SequenceValue>()
   sizeSubscriptions = new SubscriptionManager<number>()
-  private queue: Array<MessageToDb> = []
-  private dbUrl: string | null = null
-  private reconnectLoopHandle: ReturnType<typeof setTimeout> | null = null
-  private activeLatencyTest: LatencyTest | null = null
-  private cbor = false
+  queue: Array<MessageToDb> = []
+  dbUrl: string | null = null
+  reconnectLoopHandle: ReturnType<typeof setTimeout> | null = null
+  activeLatencyTest: LatencyTest | null = null
+  cbor = false
 
+  /**
+   * Connect to a DriftDB room.
+   * @param dbUrl The URL of the DriftDB room to connect to.
+   * @param cbor Whether to use CBOR encoding for messages.
+   *
+   * @returns A promise that resolves when the connection is established.
+   */
   connect(dbUrl: string, cbor: boolean = false): Promise<void> {
     if (cbor) {
       dbUrl = dbUrl + '?cbor=true'
@@ -167,6 +129,11 @@ export class DbConnection {
     return promise
   }
 
+  /**
+   * Test the connection latency by sending a ping to the server.
+   *
+   * @returns A promise that resolves to the latency in milliseconds, or null if the connection is not open.
+   */
   public testLatency(): Promise<number> | null {
     if (!this.status.connected || this.connection?.readyState !== WebSocket.OPEN) {
       return null
@@ -180,13 +147,21 @@ export class DbConnection {
     return this.activeLatencyTest.result()
   }
 
-  private debugUrl() {
+  /**
+   * Get the URL of the DriftDB UI for this connection.
+   *
+   * @returns The URL of the DriftDB UI, or null if the connection is not open.
+   */
+  private debugUrl(): string | null {
     if (!this.dbUrl) {
       return null
     }
     return `https://ui.driftdb.com/?url=${encodeURIComponent(this.dbUrl)}`
   }
 
+  /**
+   * Close the connection to the DriftDB room.
+   */
   disconnect() {
     if (this.connection !== null) {
       this.connection.onclose = null
@@ -199,11 +174,16 @@ export class DbConnection {
     this.sizeSubscriptions = new SubscriptionManager()
   }
 
-  setStatus(connected: boolean) {
+  private setStatus(connected: boolean) {
     this.status = connected ? { connected: true, debugUrl: this.debugUrl()! } : { connected: false }
     this.statusListener.dispatch(this.status)
   }
 
+  /**
+   * Send a message to the DriftDB server.
+   *
+   * @param message The message to send.
+   */
   send(message: MessageToDb) {
     if (!this.status.connected || this.connection?.readyState !== WebSocket.OPEN) {
       this.queue.push(message)
@@ -217,6 +197,14 @@ export class DbConnection {
     }
   }
 
+  /**
+   * Subscribe to a key in the DriftDB room.
+   *
+   * @param key The key to subscribe to.
+   * @param listener A callback that will be called whenever a new value is pushed to the key.
+   * @param sizeCallback An optional callback that will be called whenever the size of the
+   * server's retained stream changes.
+   */
   subscribe(
     key: Key,
     listener: (event: SequenceValue) => void,
@@ -229,6 +217,13 @@ export class DbConnection {
     this.send({ type: 'get', key, seq: 0 })
   }
 
+  /**
+   * Unsubscribe from a key in the DriftDB room.
+   *
+   * @param key The key to unsubscribe from.
+   * @param listener The callback that was passed to `subscribe`.
+   * @param sizeCallback The callback that was passed to `subscribe`.
+   */
   unsubscribe(
     subject: Key,
     listener: (event: SequenceValue) => void,
@@ -241,6 +236,14 @@ export class DbConnection {
   }
 }
 
+/**
+ * Generate a random client ID for the current client.
+ *
+ * The client ID is stored in session storage so that it is the same
+ * across page reloads.
+ *
+ * @returns A random client ID that is stored in session storage.
+ */
 export function uniqueClientId(): string {
   if (sessionStorage.getItem(CLIENT_ID_KEY)) {
     return sessionStorage.getItem(CLIENT_ID_KEY)!
@@ -248,5 +251,53 @@ export function uniqueClientId(): string {
     let clientId = crypto.randomUUID()
     sessionStorage.setItem(CLIENT_ID_KEY, clientId)
     return clientId
+  }
+}
+
+class EventListener<T> {
+  listeners: Array<(event: T) => void> = []
+
+  addListener(listener: (event: T) => void) {
+    this.listeners.push(listener)
+  }
+
+  removeListener(listener: (event: T) => void) {
+    this.listeners = this.listeners.filter((l) => l !== listener)
+  }
+
+  dispatch(event: T) {
+    this.listeners.forEach((l) => l(event))
+  }
+}
+
+class SubscriptionManager<T> {
+  subscriptions: Map<string, EventListener<T>> = new Map()
+
+  subscribe(key: Key, listener: (event: T) => void) {
+    if (!this.subscriptions.has(key)) {
+      this.subscriptions.set(key, new EventListener())
+    }
+
+    const subscription = this.subscriptions.get(key)!
+    subscription.addListener(listener)
+  }
+
+  unsubscribe(subject: Key, listener: (event: T) => void) {
+    const key = JSON.stringify(subject)
+    if (!this.subscriptions.has(key)) {
+      return
+    }
+
+    const subscription = this.subscriptions.get(key)!
+    subscription.removeListener(listener)
+  }
+
+  dispatch(key: Key, event: T) {
+    if (!this.subscriptions.has(key)) {
+      return
+    }
+
+    const subscription = this.subscriptions.get(key)!
+    subscription.dispatch(event)
   }
 }

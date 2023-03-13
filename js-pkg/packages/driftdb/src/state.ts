@@ -1,6 +1,10 @@
 import { DbConnection } from './index'
 import { SequenceValue } from './types'
 
+/**
+ * Provides a way to store a single value on a key in a DriftDB room, and listen
+ * for changes to that value from other clients.
+ */
 export class StateListener<T> {
   lastUpdateSent = 0
   lastValue: T | null = null

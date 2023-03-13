@@ -1,26 +1,6 @@
 import { DbConnection } from '.'
 import { SequenceValue } from './types'
 
-export interface ReducerOpts<T, A> {
-  /** A key identifying the stream to use for the reducer. */
-  key: string
-
-  /** The reducer function applied when dispatch is called. */
-  reducer: (state: T, action: A) => T
-
-  /** The initial state passed to the reducer. */
-  initialValue: T
-
-  /** The number of messages to keep in the stream before compacting. */
-  sizeThreshold?: number
-
-  /** The database connection to use. */
-  db: DbConnection
-
-  /** A callback function called when the state changes, either because of a local call to dispatch or a remote event. */
-  callback: (state: T) => void
-}
-
 export class Reducer<T, A> {
   state: any
   lastConfirmedState: any
@@ -31,7 +11,25 @@ export class Reducer<T, A> {
   callback: (state: T) => void
   sizeThreshold: number
 
-  constructor(opts: ReducerOpts<T, A>) {
+  constructor(opts: {
+    /** A key identifying the stream to use for the reducer. */
+    key: string
+
+    /** The reducer function applied when dispatch is called. */
+    reducer: (state: T, action: A) => T
+
+    /** The initial state passed to the reducer. */
+    initialValue: T
+
+    /** The number of messages to keep in the stream before compacting. */
+    sizeThreshold?: number
+
+    /** The database connection to use. */
+    db: DbConnection
+
+    /** A callback function called when the state changes, either because of a local call to dispatch or a remote event. */
+    callback: (state: T) => void
+  }) {
     this.state = structuredClone(opts.initialValue)
     this.lastConfirmedState = structuredClone(opts.initialValue)
     this.lastConfirmedSeq = 0
