@@ -20,8 +20,10 @@ export class StateListener<T> {
     this.callback = callback.bind(this)
     this.setStateOptimistic = this.setStateOptimistic.bind(this)
     this.sendUpdate = this.sendUpdate.bind(this)
+  }
 
-    db.subscribe(key, (value: SequenceValue) => {
+  subscribe() {
+    this.db.subscribe(this.key, (value: SequenceValue) => {
       this.callback(value.value as T)
     })
   }

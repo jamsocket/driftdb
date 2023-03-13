@@ -9,7 +9,7 @@ import {
   uniqueClientId,
   WrappedPresenceMessage
 } from 'driftdb'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 
 const ROOM_ID_KEY = '_driftdb_room'
 
@@ -65,7 +65,7 @@ export function DriftDBProvider(props: {
     return () => {
       dbRef.current?.disconnect()
     }
-  }, [])
+  }, [props.room, props.useBinary, props.api, dbRef.current])
 
   return <DatabaseContext.Provider value={dbRef.current}>{props.children}</DatabaseContext.Provider>
 }
@@ -108,10 +108,15 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
   const db = useDatabase()
   const [state, setInnerState] = React.useState<T>(initialValue)
 
-  const stateListener = useRef<StateListener<T>>(null)
+  const stateListener = useRef<StateListener<SetStateAction<T>> | null>(null)
+  
   if (stateListener.current === null) {
-    ;(stateListener as any).current = new StateListener(setInnerState, db, key)
+    stateListener.current = new StateListener(setInnerState, db, key)
   }
+
+  useEffect(() => {
+    stateListener.current!.subscribe()
+  }, [stateListener.current])
 
   const setState = useCallback(
     (value: T | ((v: T) => T)) => {
@@ -254,6 +259,10 @@ export function useSharedReducer<State, Action>(
       callback: setState
     })
   }
+
+  useEffect(() => {
+    reducerRef.current!.subscribe()
+  }, [reducerRef.current])
 
   const dispatch = reducerRef.current.dispatch
 
