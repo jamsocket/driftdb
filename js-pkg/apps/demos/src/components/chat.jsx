@@ -39,7 +39,7 @@ export const Chat = ({ myId, withId }) => {
         >
           send!
         </button>
-        Latency: {latency} ms
+        Latency: {latency ? latency.toFixed(2) + ' ms' : 'No datachannel latency reported'}
       </form>
     </section>
   )

@@ -8,7 +8,7 @@ const Peers = ({ peers, myLatency }) => {
     <tr key={id}>
       <td className="border px-4 mx-3"> {sessionPeer} </td>
       <td className="border px-4 mx-3"> {id} </td>
-      <td className="border px-4 mx-3"> {latency + myLatency} ms </td>
+      <td className="border px-4 mx-3"> {(latency + myLatency).toFixed(2)} ms </td>
     </tr>
   ))
   return (

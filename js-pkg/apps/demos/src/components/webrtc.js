@@ -137,7 +137,11 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
   }, [signalingMessages])
 
   const getLatency = async () => {
-    const stats = await connRef.current?.getStats(null)
+    try {
+      //NOTE: this will sometimes be undefined since this code may be run
+      // before a connection is established. that's OK.
+      var stats = await connRef.current?.getStats(null)
+    } catch (e) {}
 
     for (const [_, st] of stats ?? []) {
       if (st.type === 'candidate-pair') {
