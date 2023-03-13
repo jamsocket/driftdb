@@ -123,7 +123,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
               }
               break
             default:
-              throw 'unknown message'
+              throw new Error('unknown message')
           }
         }
       } catch (e) {
