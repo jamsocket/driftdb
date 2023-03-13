@@ -21,12 +21,12 @@ export const useWebRTCMessagingChannel = (p1, p2) => {
   ])
   const getLatency = useWebRTCConnection(p1, p2, connSetupArray.current)
   React.useEffect(() => {
-    const latency_setter = setTimeout(async function l() {
+    let timeout_id = setTimeout(async function l() {
       setLatency(await getLatency())
-      setTimeout(l, 1000)
+      timeout_id = setTimeout(l, 1000)
     }, 1000)
     return () => {
-      clearTimeout(latency_setter)
+      clearTimeout(timeout_id)
     }
   }, [])
   return [
