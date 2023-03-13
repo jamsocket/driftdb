@@ -15,6 +15,13 @@ const ROOM_ID_KEY = '_driftdb_room'
 
 export const DatabaseContext = React.createContext<DbConnection | null>(null)
 
+/**
+ * A React hook that returns a handle to the current database connection provided by the
+ * nearest `DriftDBProvider` in the tree. If there is no `DriftDBProvider` in the tree,
+ * throws an error.
+ * 
+ * @returns A handle to the current database connection.
+ */
 export function useDatabase(): DbConnection {
   const db = React.useContext(DatabaseContext)
   if (db === null) {
@@ -23,8 +30,13 @@ export function useDatabase(): DbConnection {
   return db
 }
 
-export function RoomQRCode() {
-  const db = useDatabase()
+/**
+ * A React hook which returns the current room ID, if any. The room ID is extracted from the
+ * current URL, so it can be used outside of a `DriftDBProvider` tree.
+ * 
+ * @returns The current room ID, or `null` if there is no room ID in the URL.
+ */
+export function useRoomIdFromUrl(): string | null {
   const [pageUrl, setPageUrl] = React.useState<string | null>(null)
 
   useEffect(() => {
@@ -41,31 +53,55 @@ export function RoomQRCode() {
       }
 
       setPageUrl(window.location.href)
-
-      return () => {
-        db.statusListener.removeListener(callback)
-      }
     }
 
-    db.statusListener.addListener(callback)
-  }, [db])
+    window.addEventListener('popstate', callback)
+    window.addEventListener('pushstate', callback)
+    callback()
+
+    return () => {
+      window.removeEventListener('popstate', callback)
+      window.removeEventListener('pushstate', callback)
+    }
+  }, [])
+
+  return pageUrl
+}
+
+/**
+ * A React component that displays a QR code containing the current URL, including the room ID.
+ * If there is no room ID in the URL, this component will not render anything.
+ */
+export function RoomQRCode(): JSX.Element {
+  const pageUrl = useRoomIdFromUrl()
 
   if (pageUrl) {
     return <img src={`https://api.jamsocket.live/qrcode?url=${pageUrl}`} />
   } else {
-    return null
+    return <></>
   }
 }
 
 type SetterFunction<T> = (value: T | ((v: T) => T)) => void
 
+/**
+ * A React hook that returns the current value of a shared state variable, and a function
+ * to update it. The state variable is identified by a key, which must be unique within the
+ * current room.
+ * 
+ * @param key The key of the state variable.
+ * @param initialValue The initial value of the state variable.
+ * 
+ * @returns A tuple containing the current value of the state variable, and a function to
+ * update it.
+ */
 export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunction<T>] {
   const db = useDatabase()
   const [state, setInnerState] = React.useState<T>(initialValue)
 
   const stateListener = useRef<StateListener<T>>(null)
   if (stateListener.current === null) {
-    ;(stateListener as any).current = new StateListener(setInnerState, db, key)
+    ; (stateListener as any).current = new StateListener(setInnerState, db, key)
   }
 
   const setState = useCallback(
@@ -84,6 +120,12 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
   return [state, setState]
 }
 
+/**
+ * A React hook that returns a unique client ID for the current client. This ID is maintained
+ * in the browser’s session storage, so it is retained across page reloads.
+ * 
+ * @returns A unique client ID.
+ */
 export function useUniqueClientId(): string {
   const currentId = useRef<string>()
 
@@ -102,6 +144,7 @@ export function useSharedReducer<State, Action>(
   reducer: (state: State, action: Action) => State,
   initialValue: State
 ): [State, (action: Action) => void]
+
 export function useSharedReducer<State, Action, InitialValue>(
   key: string,
   reducer: (state: State, action: Action) => State,
@@ -109,6 +152,17 @@ export function useSharedReducer<State, Action, InitialValue>(
   init: (initialValue: InitialValue) => State
 ): [State, (action: Action) => void]
 
+/**
+ * A React hook that returns a reducer state variable, and a function to update it. The state
+ * variable is identified by a key, which must be unique within the current room.
+ * 
+ * @param key The key that uniquely identifies the state variable within the current room.
+ * @param reducer A reducer function that will be used to update the state variable.
+ * @param initialValue The initial value of the state variable (if `init` is not passed),
+ * or the value passed into `init` to produce the initial value.
+ * @param init An optional function that will be used to produce the initial value of the
+ * state variable.
+ */
 export function useSharedReducer<State, Action>(
   key: string,
   reducer: (state: State, action: Action) => State,
@@ -141,6 +195,15 @@ export function useSharedReducer<State, Action>(
   return [state, dispatch]
 }
 
+/**
+ * A React hook that returns the current connection status of the database
+ * from the current `DriftDBProvider`.
+ * The result is an object with a `connected` property that is `true` if the
+ * database is connected to the server. When `connected` is `true`, a `debugUrl`
+ * property is also returned. 
+ * 
+ * @returns The current connection status of the database.
+ */
 export function useConnectionStatus(): ConnectionStatus {
   const db = useDatabase()
   const [status, setStatus] = React.useState<ConnectionStatus>({ connected: false })
@@ -158,6 +221,11 @@ export function useConnectionStatus(): ConnectionStatus {
   return status
 }
 
+/**
+ * A React hook that measures the latency of the database connection in a
+ * loop and returns the current latency in milliseconds, or `null` before
+ * the first measurement.
+ */
 export function useLatency(): number | null {
   const db = useDatabase()
   const [latency, setLatency] = useState<number | null>(null!)
@@ -179,6 +247,14 @@ export function useLatency(): number | null {
   return latency
 }
 
+/**
+ * A React hook that returns a map of the current presence of all clients in the current room.
+ * The client also passes its own value, which will be included in the map for other clients.
+ * 
+ * @param key The key that uniquely identifies the presence variable within the current room.
+ * @param value The value that will be included in the map for other clients.
+ * @returns A map of the current presence of all clients in the current room.
+*/
 export function usePresence<T>(key: string, value: T): Record<string, WrappedPresenceMessage<T>> {
   const db = useDatabase()
   const clientId = useUniqueClientId()
@@ -200,7 +276,10 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
   return presence
 }
 
-export function StatusIndicator() {
+/**
+ * A React component that displays the current connection status of the database.
+ */
+export function StatusIndicator(): JSX.Element {
   const status = useConnectionStatus()
   const latency = useLatency()
   const latencyStr = latency === null ? '...' : Math.round(latency).toString()
@@ -246,14 +325,17 @@ export function StatusIndicator() {
   )
 }
 
-interface DriftDBProviderProps {
+/**
+ * A React component that provides a `DbConnection` to all child components.
+ * 
+ * @param props The props for the component.
+ */
+export function DriftDBProvider(props: {
   children: React.ReactNode
   api: string
   room?: string
   crdt?: boolean
-}
-
-export function DriftDBProvider(props: DriftDBProviderProps) {
+}): JSX.Element {
   const dbRef = useRef<DbConnection | null>(null)
   if (dbRef.current === null) {
     dbRef.current = new DbConnection()

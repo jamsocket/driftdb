@@ -9,6 +9,7 @@ rm -rf "${DOCS_DIR}/docs/react-api"
 rm -rf "${DOCS_DIR}/docs/vanilla-api"
 
 cd ${DOCS_DIR}/../js-pkg/packages/driftdb
+npm i
 npm run build
 
 cd "${DOCS_DIR}"
