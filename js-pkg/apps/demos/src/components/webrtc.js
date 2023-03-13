@@ -21,12 +21,13 @@ export const useWebRTCMessagingChannel = (p1, p2) => {
   ])
   const getLatency = useWebRTCConnection(p1, p2, connSetupArray.current)
   React.useEffect(() => {
-    setTimeout(async function l() {
-      try {
-        const _lat = await getLatency()
-        setLatency(_lat)
-      } catch (e) {}
+    const latency_setter = setTimeout(async function l() {
+      setLatency(await getLatency())
+      setTimeout(l, 1000)
     }, 1000)
+    return () => {
+      clearTimeout(latency_setter)
+    }
   }, [])
   return [
     messages,
@@ -140,11 +141,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
 
     for (const [_, st] of stats ?? []) {
       if (st.type === 'candidate-pair') {
-        if (typeof st.currentRoundTripTime === 'number') {
-          return st.currentRoundTripTime / 2
-        } else {
-          throw new Error('current round trip time not reported!')
-        }
+        return Number.isFinite(st.currentRoundTripTime) ? st.currentRoundTripTime / 2 : null
       }
     }
   }
