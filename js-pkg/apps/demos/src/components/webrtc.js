@@ -4,6 +4,7 @@ import { useDriftDBSignalingChannel } from './signaling'
 export const useWebRTCMessagingChannel = (p1, p2) => {
   let theirdataChannelRef = React.useRef(null)
   let [messages, addMessage] = React.useReducer((state, msg) => [...state, msg], [])
+  let [latency, setLatency] = React.useState(0)
   const connSetupArray = React.useRef([
     (conn) => {
       let dataChannel = conn.createDataChannel(p1)
@@ -18,8 +19,15 @@ export const useWebRTCMessagingChannel = (p1, p2) => {
       }
     }
   ])
-  useWebRTCConnection(p1, p2, connSetupArray.current)
-
+  const getLatency = useWebRTCConnection(p1, p2, connSetupArray.current)
+  React.useEffect(() => {
+    setTimeout(async function l() {
+      try {
+        const _lat = await getLatency()
+        setLatency(_lat)
+      } catch (e) {}
+    }, 1000)
+  }, [])
   return [
     messages,
     (msg) => {
@@ -29,7 +37,8 @@ export const useWebRTCMessagingChannel = (p1, p2) => {
         console.error(e)
         console.log('unsent: ', msg)
       }
-    }
+    },
+    latency
   ]
 }
 
@@ -126,5 +135,18 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
     })()
   }, [signalingMessages])
 
-  return
+  const getLatency = async () => {
+    const stats = await connRef.current?.getStats(null)
+
+    for (const [_, st] of stats ?? []) {
+      if (st.type === 'candidate-pair') {
+        if (typeof st.currentRoundTripTime === 'number') {
+          return st.currentRoundTripTime / 2
+        } else {
+          throw new Error('yo!')
+        }
+      }
+    }
+  }
+  return getLatency
 }

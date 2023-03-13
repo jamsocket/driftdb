@@ -20,7 +20,8 @@ const Peers = ({ peers, myLatency }) => {
           </th>
         </tr>
         <tr>
-          <th className="border mx-3"> Session ID </th> <th> Connection ID </th>
+          <th className="border mx-3"> Session ID </th>
+          <th> Connection ID </th>
           <th> Latency through DriftDB server </th>
         </tr>
       </thead>

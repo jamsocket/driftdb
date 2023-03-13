@@ -7,10 +7,11 @@ const msgToJsx = (message) => (
   </li>
 )
 export const Chat = ({ myId, withId }) => {
-  let [messages, send] = useWebRTCMessagingChannel(myId, withId)
+  let [messages, send, latency] = useWebRTCMessagingChannel(myId, withId)
   let [myMessages, dispatch] = React.useReducer((state, msg) => [...state, msg], [])
   const listMyMessages = myMessages.map(msgToJsx)
   const listMessages = messages.map(msgToJsx)
+
   return (
     <section className="border border-green-800 p-4 w-1/2">
       <h3 className="border text-lg px-3 font-bold"> sent </h3>
@@ -36,9 +37,9 @@ export const Chat = ({ myId, withId }) => {
           className="mx-4 border p-2 rounded-full fill-blue-500 hover:fill-green-500"
           type="submit"
         >
-          {' '}
-          send!{' '}
+          send!
         </button>
+        Latency: {latency} ms
       </form>
     </section>
   )
