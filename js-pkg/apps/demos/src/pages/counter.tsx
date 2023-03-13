@@ -52,7 +52,7 @@ export default function Counter() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div>
-        <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
+        <DriftDBProvider api={DRIFTDB_URL} useBinary={true}>
           <h1 className="text-2xl font-bold text-gray-800">DriftDB - Shared Reducer Demo</h1>
           <CounterDemo />
           <div className="flex flex-col gap-4 sm:max-w-sm border border-gray-300 bg-gray-200 p-6 rounded-3xl">

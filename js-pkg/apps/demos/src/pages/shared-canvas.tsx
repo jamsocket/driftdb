@@ -209,7 +209,7 @@ function drawCanvas(
 
 export default function App() {
   return (
-    <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
+    <DriftDBProvider api={DRIFTDB_URL} useBinary={true}>
       <SharedCanvas />
     </DriftDBProvider>
   )

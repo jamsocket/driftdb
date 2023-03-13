@@ -4,6 +4,8 @@
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
+const sourceLinkTemplate = 'https://github.com/drifting-in-space/driftdb/blob/{gitRevision}/{path}#L{line}'
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'DriftDB',
@@ -30,6 +32,7 @@ const config = {
         },
         entryPoints: ['../js-pkg/packages/driftdb/src/index.ts'],
         tsconfig: '../js-pkg/packages/driftdb/tsconfig.json',
+        sourceLinkTemplate
       },
     ],
     [
@@ -42,10 +45,10 @@ const config = {
         },
         entryPoints: ['../js-pkg/packages/driftdb-react/src/index.tsx'],
         tsconfig: '../js-pkg/packages/driftdb-react/tsconfig.json',
+        sourceLinkTemplate
       },
     ],
   ],
-
 
   presets: [
     [
