@@ -13,18 +13,22 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 
 const ROOM_ID_KEY = '_driftdb_room'
 
-
 /**
  * A React component that provides a `DbConnection` to all child components.
  * 
  * @param props The props for the component.
  */
 export function DriftDBProvider(props: {
+  /** Elements under the prodider in the tree. */
   children: React.ReactNode
+  /** The URL of the DriftDB API. */
   api: string
+  /** The room ID to connect to. If not provided, attempts to extract the room ID
+   *  from the URL and creates a new room if one is not present. */
   room?: string
-  crdt?: boolean
-}): JSX.Element {
+  /** Whether to use binary messages (enables raw typed arrays in messages). */
+  useBinary?: boolean
+}): React.ReactElement {
   const dbRef = useRef<DbConnection | null>(null)
   if (dbRef.current === null) {
     dbRef.current = new DbConnection()
@@ -55,7 +59,7 @@ export function DriftDBProvider(props: {
         window.history.replaceState({}, '', url.toString())
       }
 
-      dbRef.current?.connect(result.socket_url, props.crdt)
+      dbRef.current?.connect(result.socket_url, props.useBinary)
     })
 
     return () => {
@@ -171,7 +175,7 @@ export function useRoomIdFromUrl(): string | null {
  * A React component that displays a QR code containing the current URL, including the room ID.
  * If there is no room ID in the URL, this component will not render anything.
  */
-export function RoomQRCode(): JSX.Element {
+export function RoomQRCode(): React.ReactElement {
   const pageUrl = useRoomIdFromUrl()
 
   if (pageUrl) {
