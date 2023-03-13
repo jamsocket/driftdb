@@ -344,7 +344,7 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
 /**
  * A React component that displays the current connection status of the database.
  */
-export function StatusIndicator(): JSX.Element {
+export function StatusIndicator(): React.ReactElement {
   const status = useConnectionStatus()
   const latency = useLatency()
   const latencyStr = latency === null ? '...' : Math.round(latency).toString()
