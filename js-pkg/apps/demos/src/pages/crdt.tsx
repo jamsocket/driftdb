@@ -11,21 +11,25 @@ class DriftYjsProvider {
   constructor(private db: DbConnection, key: string, public doc: Y.Doc, onUpdate: () => void) {
     let lastSeq = 0
 
-    this.db.subscribe(key, (data) => {
-      Y.applyUpdate(doc, data.value as Uint8Array)
-      lastSeq = data.seq
-    }, (size: number) => {
-      if (size > 30) {
-        // compact
-        let update = Y.encodeStateAsUpdate(doc)
-        this.db.send({
-          type: 'push',
-          key: key,
-          value: update,
-          action: { type: 'compact', seq: lastSeq }
-        })
+    this.db.subscribe(
+      key,
+      (data) => {
+        Y.applyUpdate(doc, data.value as Uint8Array)
+        lastSeq = data.seq
+      },
+      (size: number) => {
+        if (size > 30) {
+          // compact
+          let update = Y.encodeStateAsUpdate(doc)
+          this.db.send({
+            type: 'push',
+            key: key,
+            value: update,
+            action: { type: 'compact', seq: lastSeq }
+          })
+        }
       }
-    })
+    )
 
     doc.on('update', (update: Uint8Array) => {
       this.db.send({
@@ -55,33 +59,38 @@ function CrdtDemo() {
   const ydoc = useYDoc('text')
   const editorRef = useRef<Editor | null>(null)
 
-  const codeMirrorRef = useCallback((ref: HTMLTextAreaElement | null) => {
-    if (ref == null) {
-      if (editorRef.current != null) {
-        (editorRef.current as any).toTextArea()
-        editorRef.current = null
+  const codeMirrorRef = useCallback(
+    (ref: HTMLTextAreaElement | null) => {
+      if (ref == null) {
+        if (editorRef.current != null) {
+          ;(editorRef.current as any).toTextArea()
+          editorRef.current = null
+        }
+        return
       }
-      return
-    }
 
-    const CodeMirror = require('codemirror')
-    const CodemirrorBinding = require('y-codemirror').CodemirrorBinding
-    const yText = ydoc.getText('text')
+      const CodeMirror = require('codemirror')
+      const CodemirrorBinding = require('y-codemirror').CodemirrorBinding
+      const yText = ydoc.getText('text')
 
-    editorRef.current = CodeMirror.fromTextArea(ref, {
-      lineNumbers: true
-    })
+      editorRef.current = CodeMirror.fromTextArea(ref, {
+        lineNumbers: true
+      })
 
-    new CodemirrorBinding(yText, editorRef.current)
-  }, [ydoc])
+      new CodemirrorBinding(yText, editorRef.current)
+    },
+    [ydoc]
+  )
 
-  return <div>
-    <h1>CRDT Demo</h1>
-
+  return (
     <div>
-      <textarea ref={codeMirrorRef} />
+      <h1>CRDT Demo</h1>
+
+      <div>
+        <textarea ref={codeMirrorRef} />
+      </div>
     </div>
-  </div>
+  )
 }
 
 export default function Demos() {

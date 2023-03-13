@@ -30,12 +30,12 @@ export class Compactor<T, A> {
   constructor(opts: {
     /** A key identifying the stream to use for the reducer. */
     key: string
-  
+
     compactable: Compactable<T, A>
-    
+
     /** The number of messages to keep in the stream before compacting. */
     sizeThreshold?: number
-  
+
     /** The database connection to use. */
     db: DbConnection
 
@@ -48,7 +48,7 @@ export class Compactor<T, A> {
     this.state = structuredClone(state)
     this.lastConfirmedSeq = 0
     this.db = opts.db
-    
+
     this.key = opts.key
     this.callback = opts.callback
     this.sizeThreshold = opts.sizeThreshold || 30
@@ -96,7 +96,10 @@ export class Compactor<T, A> {
     }
 
     if (value.apply !== undefined) {
-      this.lastConfirmedState = this.compactable.applyAction(this.lastConfirmedState, value.apply as A)
+      this.lastConfirmedState = this.compactable.applyAction(
+        this.lastConfirmedState,
+        value.apply as A
+      )
       this.lastConfirmedSeq = sequenceValue.seq
       this.state = structuredClone(this.lastConfirmedState)
       this.callback(this.state)

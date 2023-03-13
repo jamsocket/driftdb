@@ -109,7 +109,7 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
   const [state, setInnerState] = React.useState<T>(initialValue)
 
   const stateListener = useRef<StateListener<SetStateAction<T>> | null>(null)
-  
+
   if (stateListener.current === null) {
     stateListener.current = new StateListener(setInnerState, db, key)
   }

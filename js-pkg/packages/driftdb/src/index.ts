@@ -165,7 +165,6 @@ export class DbConnection {
    * Close the connection to the DriftDB room.
    */
   disconnect() {
-    console.log('Disconnect called.')
     this.teardown = true
     if (this.connection !== null) {
       this.connection.onclose = null
