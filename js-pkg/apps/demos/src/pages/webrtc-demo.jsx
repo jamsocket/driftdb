@@ -1,25 +1,27 @@
 import * as React from 'react'
-import { DriftDBProvider, usePresence } from 'driftdb-react'
+import { DriftDBProvider, usePresence, useLatency } from 'driftdb-react'
 import { Chat } from '../components/chat.jsx'
 import { DRIFTDB_URL } from '../config'
 
-const Peers = ({ peers }) => {
-  const listItems = peers.map(([sessionPeer, connPeer]) => (
-    <tr key={connPeer}>
+const Peers = ({ peers, myLatency }) => {
+  const listItems = peers.map(([sessionPeer, { id, latency }]) => (
+    <tr key={id}>
       <td className="border px-4 mx-3"> {sessionPeer} </td>
-      <td className="border px-4 mx-3"> {connPeer} </td>
+      <td className="border px-4 mx-3"> {id} </td>
+      <td className="border px-4 mx-3"> {latency + myLatency} ms </td>
     </tr>
   ))
   return (
     <table className="border p-4 m-5">
       <thead className="border">
         <tr>
-          <th colSpan="2" className="border">
+          <th colSpan="3" className="border">
             PeerTable
           </th>
         </tr>
         <tr>
           <th className="border mx-3"> Session ID </th> <th> Connection ID </th>
+          <th> Latency through DriftDB server </th>
         </tr>
       </thead>
       <tbody>{listItems}</tbody>
@@ -42,16 +44,22 @@ const useNewUniqueID = () => {
   return id
 }
 
+const sessionPeerToValue = (obj) =>
+  Object.entries(obj).map(([sessionId, { value }]) => [sessionId, value])
+
 const RTCArea = () => {
   const clientId = useNewUniqueID()
-  const others = usePresence('presence', clientId)
-  const sessionPeerToConnPeer = Object.entries(others).map(([sessionId, { value }]) => [
+  const myLatency = useLatency()
+  const others = usePresence('presence', { id: clientId, latency: myLatency })
+  const sessionPeerToConnPeer = Object.entries(others).map(([sessionId, val]) => [
     sessionId,
-    value
+    val.value.id
   ])
+  const peers = sessionPeerToValue(others)
+
   return (
     <section>
-      <Peers peers={sessionPeerToConnPeer} />
+      <Peers peers={peers} myLatency={myLatency} />
       <h1 className="text-4xl text-center m-5"> Chats </h1>
       <Chats peers={sessionPeerToConnPeer} myId={clientId} />
     </section>
