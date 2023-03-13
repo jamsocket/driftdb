@@ -13,7 +13,7 @@ export const Chat = ({ myId, withId }) => {
   const listMessages = messages.map(msgToJsx)
 
   return (
-    <section className="border border-green-800 p-4 w-1/2">
+    <section className="border border-green-800 p-4 content-center">
       <h3 className="border text-lg px-3 font-bold"> sent </h3>
       <ul className="border m-3">{listMyMessages}</ul>
       <h3 className="border text-lg px-3 font-bold"> received </h3>

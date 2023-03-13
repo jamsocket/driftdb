@@ -32,12 +32,12 @@ const Peers = ({ peers, myLatency }) => {
 
 const Chats = ({ myId, peers }) => {
   const listChats = peers.map(([sessionPeer, connPeer]) => (
-    <li key={sessionPeer}>
+    <li key={sessionPeer} className="border border-slate-500 p-4 m-4">
       <h3 className="underline"> Chat with {sessionPeer} </h3>
       <Chat key={connPeer} myId={myId} withId={connPeer} />
     </li>
   ))
-  return <ul>{listChats}</ul>
+  return <ul className="flex flex-wrap">{listChats}</ul>
 }
 
 const useNewUniqueID = () => {
