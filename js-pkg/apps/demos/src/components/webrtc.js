@@ -78,7 +78,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
     }
 
     conn.oniceconnectionstatechange = (_e) => {
-      if (conn.iceConnectionState === 'failed' || conn.iceConnectionState === 'disconnected') {
+      if (conn.iceConnectionState === 'failed') {
         console.log('conn failed, restarting ICE')
         conn.restartIce()
       }
