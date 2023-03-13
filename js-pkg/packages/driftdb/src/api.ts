@@ -26,7 +26,7 @@ export class Api {
 
   /**
    * Create a new DriftDB Room API client.
-   * 
+   *
    * @param apiUrl The base URL of the DriftDB Room API.
    */
   constructor(apiUrl: string) {
@@ -38,7 +38,7 @@ export class Api {
 
   /**
    * Ask the DriftDB server to create a new room and return its information.
-   * 
+   *
    * @returns The room information.
    */
   async newRoom(): Promise<RoomResult> {
@@ -51,7 +51,7 @@ export class Api {
 
   /**
    * Get information about an existing room.
-   * 
+   *
    * @param roomId The ID of the room to get information about.
    * @returns The room information.
    */

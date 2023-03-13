@@ -32,7 +32,7 @@ export class DbConnection {
    * Connect to a DriftDB room.
    * @param dbUrl The URL of the DriftDB room to connect to.
    * @param cbor Whether to use CBOR encoding for messages.
-   * 
+   *
    * @returns A promise that resolves when the connection is established.
    */
   connect(dbUrl: string, cbor: boolean = false): Promise<void> {
@@ -131,7 +131,7 @@ export class DbConnection {
 
   /**
    * Test the connection latency by sending a ping to the server.
-   * 
+   *
    * @returns A promise that resolves to the latency in milliseconds, or null if the connection is not open.
    */
   public testLatency(): Promise<number> | null {
@@ -149,7 +149,7 @@ export class DbConnection {
 
   /**
    * Get the URL of the DriftDB UI for this connection.
-   * 
+   *
    * @returns The URL of the DriftDB UI, or null if the connection is not open.
    */
   private debugUrl(): string | null {
@@ -181,7 +181,7 @@ export class DbConnection {
 
   /**
    * Send a message to the DriftDB server.
-   * 
+   *
    * @param message The message to send.
    */
   send(message: MessageToDb) {
@@ -199,7 +199,7 @@ export class DbConnection {
 
   /**
    * Subscribe to a key in the DriftDB room.
-   * 
+   *
    * @param key The key to subscribe to.
    * @param listener A callback that will be called whenever a new value is pushed to the key.
    * @param sizeCallback An optional callback that will be called whenever the size of the
@@ -219,7 +219,7 @@ export class DbConnection {
 
   /**
    * Unsubscribe from a key in the DriftDB room.
-   * 
+   *
    * @param key The key to unsubscribe from.
    * @param listener The callback that was passed to `subscribe`.
    * @param sizeCallback The callback that was passed to `subscribe`.
@@ -238,10 +238,10 @@ export class DbConnection {
 
 /**
  * Generate a random client ID for the current client.
- * 
+ *
  * The client ID is stored in session storage so that it is the same
  * across page reloads.
- * 
+ *
  * @returns A random client ID that is stored in session storage.
  */
 export function uniqueClientId(): string {

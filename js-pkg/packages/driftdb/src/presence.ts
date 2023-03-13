@@ -124,7 +124,7 @@ export class PresenceListener<T> {
 
   /**
    * Update the client's own presence state.
-   * 
+   *
    * This is debounced locally, so if it is called multiple times in a short
    * period of time, only the last call will be sent.
    */
