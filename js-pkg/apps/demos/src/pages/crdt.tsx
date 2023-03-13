@@ -92,7 +92,7 @@ export default function Demos() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div>
-        <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
+        <DriftDBProvider api={DRIFTDB_URL} useBinary={true}>
           <StatusIndicator />
           <CrdtDemo />
           <RoomQRCode />
