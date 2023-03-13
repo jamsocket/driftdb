@@ -1,4 +1,4 @@
-import { DRIFTDB_URL } from '@/config'
+import { DRIFTDB_URL } from '../config'
 import { DbConnection } from 'driftdb'
 import { DriftDBProvider, RoomQRCode, StatusIndicator, useDatabase } from 'driftdb-react'
 import Head from 'next/head'
@@ -92,7 +92,7 @@ export default function Demos() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div>
-        <DriftDBProvider api={DRIFTDB_URL} useBinary={true}>
+        <DriftDBProvider api={DRIFTDB_URL} crdt={true}>
           <StatusIndicator />
           <CrdtDemo />
           <RoomQRCode />
