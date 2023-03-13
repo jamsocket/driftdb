@@ -1,6 +1,11 @@
 import { DbConnection } from './index'
 import { SequenceValue } from './types'
 
+type WrappedValue = {
+  v: unknown
+  i: string
+}
+
 /**
  * Provides a way to store a single value on a key in a DriftDB room, and listen
  * for changes to that value from other clients.
@@ -10,21 +15,26 @@ export class StateListener<T> {
   lastValue: T | null = null
   debounceTimeout: number | null = null
   state: T | null = null
+  randId: string
 
   constructor(
     private callback: (value: T) => void,
     private db: DbConnection,
     private key: string,
-    private debounceMillis: number = 50
+    private debounceMillis: number = 20
   ) {
     this.callback = callback.bind(this)
     this.setStateOptimistic = this.setStateOptimistic.bind(this)
     this.sendUpdate = this.sendUpdate.bind(this)
+    this.randId = Math.random().toString(36).substring(7)
   }
 
   subscribe() {
     this.db.subscribe(this.key, (value: SequenceValue) => {
-      this.callback(value.value as T)
+      let wv = value.value as WrappedValue
+      if (wv.id !== this.randId) {
+        this.callback(wv.v as T)
+      }
     })
   }
 
@@ -38,10 +48,11 @@ export class StateListener<T> {
       clearTimeout(this.debounceTimeout)
       this.debounceTimeout = null
     }
+    const v: WrappedValue = { v: this.lastValue, id: this.randId }
     this.db?.send({
       type: 'push',
       action: { type: 'replace' },
-      value: this.lastValue,
+      value: v,
       key: this.key
     })
   }

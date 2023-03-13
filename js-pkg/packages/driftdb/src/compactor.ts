@@ -27,6 +27,9 @@ export class Compactor<T, A> {
   sizeThreshold: number
   compactable: Compactable<T, A>
 
+  /// Random token used to identify messages from this client.
+  randId: string
+
   constructor(opts: {
     /** A key identifying the stream to use for the reducer. */
     key: string
@@ -48,6 +51,7 @@ export class Compactor<T, A> {
     this.state = structuredClone(state)
     this.lastConfirmedSeq = 0
     this.db = opts.db
+    this.randId = Math.random().toString(36).substring(7)
 
     this.key = opts.key
     this.callback = opts.callback
@@ -70,7 +74,7 @@ export class Compactor<T, A> {
     this.db.send({
       type: 'push',
       action: { type: 'append' },
-      value: { apply: action },
+      value: { apply: action, i: this.randId },
       key: this.key
     })
 
@@ -101,8 +105,11 @@ export class Compactor<T, A> {
         value.apply as A
       )
       this.lastConfirmedSeq = sequenceValue.seq
-      this.state = structuredClone(this.lastConfirmedState)
-      this.callback(this.state)
+
+      if (value.i !== this.randId || !this.compactable.optimistic) {
+        this.state = structuredClone(this.lastConfirmedState)
+        this.callback(this.state)
+      }
       return
     }
 
