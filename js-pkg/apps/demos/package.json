@@ -15,12 +15,14 @@
     "@next/font": "13.1.2",
     "@react-three/drei": "^9.56.10",
     "@react-three/fiber": "^8.10.1",
+    "@types/codemirror": "^5.60.7",
     "@types/node": "18.11.18",
     "@types/react": "18.0.27",
     "@types/react-color": "^3.0.6",
     "@types/react-dom": "18.0.10",
     "@types/three": "^0.149.0",
     "autoprefixer": "^10.4.13",
+    "codemirror": "^5.65.12",
     "driftdb-react": "*",
     "eslint": "8.31.0",
     "eslint-config-next": "13.1.2",
@@ -31,7 +33,9 @@
     "react-dom": "18.2.0",
     "tailwindcss": "^3.2.7",
     "three": "^0.149.0",
-    "typescript": "4.9.4"
+    "typescript": "4.9.4",
+    "y-codemirror": "^3.0.1",
+    "yjs": "^13.5.50"
   },
   "homepage": "https://driftdb.com",
   "repository": {
