@@ -22,7 +22,7 @@ export class PresenceListener<T> {
   private db: DbConnection
   private callback: (presence: Record<string, WrappedPresenceMessage<T>>) => void
   private presence: Record<string, WrappedPresenceMessage<T>> = {}
-  private interval: ReturnType<typeof setInterval>
+  private interval: ReturnType<typeof setInterval> | null = null
   private minPresenceInterval: number
   private maxPresenceInterval: number
 
@@ -32,7 +32,7 @@ export class PresenceListener<T> {
   // True if we have a pending update.
   private nextUpdate: number
 
-  private updateHandle: ReturnType<typeof setTimeout>
+  private updateHandle: ReturnType<typeof setTimeout> | null = null
 
   constructor(options: {
     /** Initial state of the client's own presence. */
@@ -67,11 +67,13 @@ export class PresenceListener<T> {
     this.minPresenceInterval = options.minPresenceInterval ?? 20 // 20 ms
     this.maxPresenceInterval = options.maxPresenceInterval ?? 1_000 // 1 second
 
+    this.onMessage = this.onMessage.bind(this)
+  }
+
+  subscribe() {
     this.updateHandle = setTimeout(() => {
       this.update()
     }, 0)
-
-    this.onMessage = this.onMessage.bind(this)
     this.db.subscribe(this.key, this.onMessage)
 
     this.interval = setInterval(() => {
@@ -84,8 +86,14 @@ export class PresenceListener<T> {
   }
 
   destroy() {
-    clearInterval(this.interval)
-    clearTimeout(this.updateHandle)
+    if (this.interval !== null) {
+      clearInterval(this.interval)
+    }
+    
+    if (this.updateHandle !== null) {
+      clearTimeout(this.updateHandle)
+    }
+    
     this.db.unsubscribe(this.key, this.onMessage)
   }
 
@@ -139,7 +147,10 @@ export class PresenceListener<T> {
 
     if (nextUpdate < this.nextUpdate) {
       this.nextUpdate = nextUpdate
-      clearTimeout(this.updateHandle)
+
+      if (this.updateHandle !== null) {
+        clearTimeout(this.updateHandle)
+      }
       this.updateHandle = setTimeout(() => {
         this.update()
       }, this.nextUpdate - Date.now())

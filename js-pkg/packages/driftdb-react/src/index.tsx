@@ -345,6 +345,10 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
     })
   }
 
+  useEffect(() => {
+    presenceListener.current!.subscribe()
+  }, [presenceListener.current])
+
   presenceListener.current.updateState(value)
 
   return presence
