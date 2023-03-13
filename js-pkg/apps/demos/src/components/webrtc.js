@@ -49,7 +49,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
   let makingOfferRef = React.useRef(false)
 
   React.useEffect(() => {
-    console.log('newconning')
+    console.log('new connection')
     let conn = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     })
@@ -143,7 +143,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
         if (typeof st.currentRoundTripTime === 'number') {
           return st.currentRoundTripTime / 2
         } else {
-          throw new Error('yo!')
+          throw new Error('current round trip time not reported!')
         }
       }
     }
