@@ -13,6 +13,63 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 
 const ROOM_ID_KEY = '_driftdb_room'
 
+
+/**
+ * A React component that provides a `DbConnection` to all child components.
+ * 
+ * @param props The props for the component.
+ */
+export function DriftDBProvider(props: {
+  children: React.ReactNode
+  api: string
+  room?: string
+  crdt?: boolean
+}): JSX.Element {
+  const dbRef = useRef<DbConnection | null>(null)
+  if (dbRef.current === null) {
+    dbRef.current = new DbConnection()
+  }
+
+  React.useEffect(() => {
+    let api = new Api(props.api)
+
+    let roomId
+    if (props.room) {
+      roomId = props.room
+    } else {
+      const searchParams = new URLSearchParams(window.location.search)
+      roomId = searchParams.get(ROOM_ID_KEY)
+    }
+
+    let promise
+    if (roomId) {
+      promise = api.getRoom(roomId)
+    } else {
+      promise = api.newRoom()
+    }
+
+    promise.then((result: RoomResult) => {
+      if (!props.room) {
+        let url = new URL(window.location.href)
+        url.searchParams.set(ROOM_ID_KEY, result.room)
+        window.history.replaceState({}, '', url.toString())
+      }
+
+      dbRef.current?.connect(result.socket_url, props.crdt)
+    })
+
+    return () => {
+      dbRef.current?.disconnect()
+    }
+  }, [])
+
+  return <DatabaseContext.Provider value={dbRef.current}>{props.children}</DatabaseContext.Provider>
+}
+
+/**
+ * A React context which is used to pass a database connection down the component tree
+ * via the `DriftDBProvider` provider and `useDatabase` hook.
+ */
 export const DatabaseContext = React.createContext<DbConnection | null>(null)
 
 /**
@@ -28,58 +85,6 @@ export function useDatabase(): DbConnection {
     throw new Error('useDatabase must be used within a DriftDBProvider')
   }
   return db
-}
-
-/**
- * A React hook which returns the current room ID, if any. The room ID is extracted from the
- * current URL, so it can be used outside of a `DriftDBProvider` tree.
- * 
- * @returns The current room ID, or `null` if there is no room ID in the URL.
- */
-export function useRoomIdFromUrl(): string | null {
-  const [pageUrl, setPageUrl] = React.useState<string | null>(null)
-
-  useEffect(() => {
-    const callback = () => {
-      if (typeof window === 'undefined') {
-        return
-      }
-
-      const url = new URL(window.location.href)
-      const checkRoom = url.searchParams.get(ROOM_ID_KEY)
-
-      if (!checkRoom) {
-        return
-      }
-
-      setPageUrl(window.location.href)
-    }
-
-    window.addEventListener('popstate', callback)
-    window.addEventListener('pushstate', callback)
-    callback()
-
-    return () => {
-      window.removeEventListener('popstate', callback)
-      window.removeEventListener('pushstate', callback)
-    }
-  }, [])
-
-  return pageUrl
-}
-
-/**
- * A React component that displays a QR code containing the current URL, including the room ID.
- * If there is no room ID in the URL, this component will not render anything.
- */
-export function RoomQRCode(): JSX.Element {
-  const pageUrl = useRoomIdFromUrl()
-
-  if (pageUrl) {
-    return <img src={`https://api.jamsocket.live/qrcode?url=${pageUrl}`} />
-  } else {
-    return <></>
-  }
 }
 
 type SetterFunction<T> = (value: T | ((v: T) => T)) => void
@@ -118,6 +123,62 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
   )
 
   return [state, setState]
+}
+
+/**
+ * A React hook which returns the current room ID, if any. The room ID is extracted from the
+ * current URL, so it can be used outside of a `DriftDBProvider` tree.
+ * 
+ * @returns The current room ID, or `null` if there is no room ID in the URL.
+ */
+export function useRoomIdFromUrl(): string | null {
+  const [pageUrl, setPageUrl] = React.useState<string | null>(null)
+
+  useEffect(() => {
+    const callback = () => {
+      if (typeof window === 'undefined') {
+        return
+      }
+
+      const url = new URL(window.location.href)
+      const checkRoom = url.searchParams.get(ROOM_ID_KEY)
+
+      if (!checkRoom) {
+        return
+      }
+
+      setPageUrl(window.location.href)
+    }
+
+    window.addEventListener('popstate', callback)
+    window.addEventListener('pushstate', callback)
+    window.addEventListener('replacestate', callback)
+    window.addEventListener('hashchange', callback)
+    callback()
+
+    return () => {
+      window.removeEventListener('popstate', callback)
+      window.removeEventListener('pushstate', callback)
+      window.removeEventListener('replacestate', callback)
+      window.removeEventListener('hashchange', callback)
+    }
+  }, [])
+
+  return pageUrl
+}
+
+/**
+ * A React component that displays a QR code containing the current URL, including the room ID.
+ * If there is no room ID in the URL, this component will not render anything.
+ */
+export function RoomQRCode(): JSX.Element {
+  const pageUrl = useRoomIdFromUrl()
+
+  if (pageUrl) {
+    return <img src={`https://api.jamsocket.live/qrcode?url=${pageUrl}`} />
+  } else {
+    return <></>
+  }
 }
 
 /**
@@ -323,56 +384,4 @@ export function StatusIndicator(): JSX.Element {
       ) : null}
     </div>
   )
-}
-
-/**
- * A React component that provides a `DbConnection` to all child components.
- * 
- * @param props The props for the component.
- */
-export function DriftDBProvider(props: {
-  children: React.ReactNode
-  api: string
-  room?: string
-  crdt?: boolean
-}): JSX.Element {
-  const dbRef = useRef<DbConnection | null>(null)
-  if (dbRef.current === null) {
-    dbRef.current = new DbConnection()
-  }
-
-  React.useEffect(() => {
-    let api = new Api(props.api)
-
-    let roomId
-    if (props.room) {
-      roomId = props.room
-    } else {
-      const searchParams = new URLSearchParams(window.location.search)
-      roomId = searchParams.get(ROOM_ID_KEY)
-    }
-
-    let promise
-    if (roomId) {
-      promise = api.getRoom(roomId)
-    } else {
-      promise = api.newRoom()
-    }
-
-    promise.then((result: RoomResult) => {
-      if (!props.room) {
-        let url = new URL(window.location.href)
-        url.searchParams.set(ROOM_ID_KEY, result.room)
-        window.history.replaceState({}, '', url.toString())
-      }
-
-      dbRef.current?.connect(result.socket_url, props.crdt)
-    })
-
-    return () => {
-      dbRef.current?.disconnect()
-    }
-  }, [])
-
-  return <DatabaseContext.Provider value={dbRef.current}>{props.children}</DatabaseContext.Provider>
 }
