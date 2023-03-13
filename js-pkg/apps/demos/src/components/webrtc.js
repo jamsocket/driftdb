@@ -148,6 +148,7 @@ export const useWebRTCConnection = (p1, p2, connSetupArray) => {
         return Number.isFinite(st.currentRoundTripTime) ? st.currentRoundTripTime / 2 : null
       }
     }
+    return null
   }
   return getLatency
 }
