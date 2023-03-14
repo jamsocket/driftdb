@@ -13,6 +13,17 @@ import React, { SetStateAction, useCallback, useEffect, useRef, useState } from 
 
 const ROOM_ID_KEY = '_driftdb_room'
 
+function getRoomId(): string | null {
+  const url = new URL(document.location.href)
+  return url.searchParams.get(ROOM_ID_KEY)
+}
+
+function setRoomId(roomId: string): void {
+  const url = new URL(document.location.href)
+  url.searchParams.set(ROOM_ID_KEY, roomId)
+  window.history.replaceState({}, '', url.toString())
+}
+
 /**
  * A React component that provides a `DbConnection` to all child components.
  *
@@ -44,8 +55,7 @@ export function DriftDBProvider(props: {
     if (props.room) {
       roomId = props.room
     } else {
-      const searchParams = new URLSearchParams(window.location.search)
-      roomId = searchParams.get(ROOM_ID_KEY)
+      roomId = getRoomId()
     }
 
     let promise
@@ -57,9 +67,7 @@ export function DriftDBProvider(props: {
 
     promise.then((result: RoomResult) => {
       if (!props.room) {
-        let url = new URL(window.location.href)
-        url.searchParams.set(ROOM_ID_KEY, result.room)
-        window.history.replaceState({}, '', url.toString())
+        setRoomId(result.room)
       }
 
       dbRef.current?.connect(result.socket_url, props.useBinary)
@@ -144,53 +152,26 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
 }
 
 /**
- * A React hook which returns the current room ID, if any. The room ID is extracted from the
- * current URL, so it can be used outside of a `DriftDBProvider` tree.
- *
- * @returns The current room ID, or `null` if there is no room ID in the URL.
- */
-export function useRoomIdFromUrl(): string | null {
-  const [pageUrl, setPageUrl] = React.useState<string | null>(null)
-
-  useEffect(() => {
-    const callback = () => {
-      if (typeof window === 'undefined') {
-        return
-      }
-
-      const url = new URL(window.location.href)
-      const checkRoom = url.searchParams.get(ROOM_ID_KEY)
-
-      if (!checkRoom) {
-        return
-      }
-
-      setPageUrl(window.location.href)
-    }
-
-    window.addEventListener('popstate', callback)
-    window.addEventListener('pushstate', callback)
-    window.addEventListener('replacestate', callback)
-    window.addEventListener('hashchange', callback)
-    callback()
-
-    return () => {
-      window.removeEventListener('popstate', callback)
-      window.removeEventListener('pushstate', callback)
-      window.removeEventListener('replacestate', callback)
-      window.removeEventListener('hashchange', callback)
-    }
-  }, [])
-
-  return pageUrl
-}
-
-/**
  * A React component that displays a QR code containing the current URL, including the room ID.
  * If there is no room ID in the URL, this component will not render anything.
  */
 export function RoomQRCode(): React.ReactElement {
-  const pageUrl = useRoomIdFromUrl()
+  const db = useDatabase()
+  const [pageUrl, setPageUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    const callback = () => {
+      if (getRoomId() !== null) {
+        setPageUrl(document.location.href)
+      }
+    }
+
+    db.statusListener.addListener(callback)
+
+    return () => {
+      db.statusListener.removeListener(callback)
+    }
+  }, [db])
 
   if (pageUrl) {
     return <img src={`https://api.jamsocket.live/qrcode?url=${pageUrl}`} />
