@@ -65,6 +65,9 @@ function Nav({ isDesktop, curRoute }: { isDesktop?: boolean; curRoute: string })
           <NavLink href="/voxel" curRoute={curRoute}>
             Voxel Editor
           </NavLink>
+          <NavLink href="/webrtc" curRoute={curRoute}>
+            WebRTC Chat
+          </NavLink>
         </ul>
       </nav>
     </div>
