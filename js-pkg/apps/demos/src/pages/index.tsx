@@ -27,6 +27,11 @@ const demos = [
     title: 'Voxel Editor',
     href: '/voxel',
     description: 'Edit voxels in a shared environment.'
+  },
+  {
+    title: 'WebRTC Chat',
+    href: '/webrtc-demo',
+    description: 'Simple chat with WebRTC datachannels, using DriftDB for signaling.'
   }
 ]
 
