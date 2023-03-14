@@ -29,6 +29,7 @@ const config = {
         out: 'vanilla-api',
         sidebar: {
           categoryLabel: 'Vanilla JS API',
+          position: 10,
         },
         entryPoints: ['../js-pkg/packages/driftdb/src/index.ts'],
         tsconfig: '../js-pkg/packages/driftdb/tsconfig.json',
@@ -42,6 +43,7 @@ const config = {
         out: 'react-api',
         sidebar: {
           categoryLabel: 'React API',
+          position: 11,
         },
         entryPoints: ['../js-pkg/packages/driftdb-react/src/index.tsx'],
         tsconfig: '../js-pkg/packages/driftdb-react/tsconfig.json',
