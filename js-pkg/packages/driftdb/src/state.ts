@@ -23,9 +23,9 @@ export class StateListener<T> {
   key: string
 
   constructor(opts: {
-    callback: (value: T) => void,
-    db: DbConnection,
-    key: string,
+    callback: (value: T) => void
+    db: DbConnection
+    key: string
     debounceMillis?: number
   }) {
     this.callback = opts.callback

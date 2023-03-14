@@ -89,11 +89,11 @@ export class PresenceListener<T> {
     if (this.interval !== null) {
       clearInterval(this.interval)
     }
-    
+
     if (this.updateHandle !== null) {
       clearTimeout(this.updateHandle)
     }
-    
+
     this.db.unsubscribe(this.key, this.onMessage)
   }
 

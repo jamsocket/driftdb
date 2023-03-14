@@ -42,7 +42,7 @@ function useYDoc(key: string) {
       db,
       key,
       compactable: new YDocCompactable(),
-      callback: () => setVersion((i) => i + 1),
+      callback: () => setVersion((i) => i + 1)
     })
   }
 
@@ -53,7 +53,7 @@ function useYDoc(key: string) {
     doc.on('update', (update: Uint8Array) => {
       compactor.current!.dispatch(update)
     })
-  
+
     return () => {
       compactor.current!.destroy()
     }

@@ -117,7 +117,7 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
     stateListener.current = new StateListener({
       key,
       db,
-      callback: setInnerState,
+      callback: setInnerState
     })
 
     stateListener.current!.subscribe()
