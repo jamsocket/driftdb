@@ -21,11 +21,14 @@ const ROOM_ID_KEY = '_driftdb_room'
 export function DriftDBProvider(props: {
   /** Elements under the provider in the tree. */
   children: React.ReactNode
+
   /** The URL of the DriftDB API. */
   api: string
+
   /** The room ID to connect to. If not provided, attempts to extract the room ID
    *  from the URL and creates a new room if one is not present. */
   room?: string
+
   /** Whether to use binary messages (enables raw typed arrays in messages). */
   useBinary?: boolean
 }): React.ReactElement {
@@ -65,7 +68,7 @@ export function DriftDBProvider(props: {
     return () => {
       dbRef.current?.disconnect()
     }
-  }, [props.room, props.useBinary, props.api, dbRef.current])
+  }, [props.room, props.useBinary, props.api])
 
   return <DatabaseContext.Provider value={dbRef.current}>{props.children}</DatabaseContext.Provider>
 }
@@ -262,6 +265,10 @@ export function useSharedReducer<State, Action>(
 
   useEffect(() => {
     reducerRef.current!.subscribe()
+
+    return () => {
+      reducerRef.current!.destroy()
+    }
   }, [reducerRef.current])
 
   const dispatch = reducerRef.current.dispatch
@@ -347,6 +354,10 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
 
   useEffect(() => {
     presenceListener.current!.subscribe()
+
+    return () => {
+      presenceListener.current!.destroy()
+    }
   }, [presenceListener.current])
 
   presenceListener.current.updateState(value)

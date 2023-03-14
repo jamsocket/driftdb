@@ -55,6 +55,10 @@ export class Reducer<T, A> {
     this.compactor.subscribe()
   }
 
+  destroy() {
+    this.compactor.destroy()
+  }
+
   dispatch(action: A) {
     this.compactor.dispatch(action)
   }

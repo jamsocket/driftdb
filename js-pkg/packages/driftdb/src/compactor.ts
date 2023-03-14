@@ -78,7 +78,7 @@ export class Compactor<T, A> {
     this.db.subscribe(this.key, this.onSequenceValue, this.onSize)
   }
 
-  dispose() {
+  destroy() {
     this.db.unsubscribe(this.key, this.onSequenceValue, this.onSize)
   }
 
