@@ -1,17 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
-cd driftdb-server
+BASE_DIR=$(dirname "$0" | xargs realpath)
 
-killall driftdb-server || true
+cd ${BASE_DIR}/driftdb-server
+
+killall driftdb-server 2> /dev/null || true
 cargo build
 cargo run &
 
-cd ../
+cd ${BASE_DIR}/js-pkg/packages/driftdb
+npm ci
+npm run build
 
-cd js-pkg/
+cd ${BASE_DIR}/js-pkg/packages/driftdb-react
+npm ci
+npm run build
 
-npm i
-npx turbo build
-npx turbo test
+cd ${BASE_DIR}/js-pkg/apps/tests
+npm ci
+npm run test

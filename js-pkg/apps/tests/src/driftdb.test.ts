@@ -102,7 +102,12 @@ test('Test optimistic set and get.', async () => {
   let { db } = await connectToNewRoom()
 
   let expecter = new CallbackExpecter<string>()
-  let stateListener = new StateListener(expecter.accept, db, 'key')
+  let stateListener = new StateListener({
+    callback: expecter.accept,
+    db,
+    key: 'key'
+  })
+  stateListener.subscribe()
 
   stateListener.setStateOptimistic('foo')
   let result = await expecter.expect('Optimistic set not received.')
@@ -166,10 +171,20 @@ test('Test optimistic set and get.', async () => {
   let db2 = await connectToRoom(room)
 
   let expecter = new CallbackExpecter<string>()
-  let stateListener = new StateListener(expecter.accept, db, 'key')
+  let stateListener = new StateListener({
+    callback: expecter.accept,
+    db,
+    key: 'key'
+  })
+  stateListener.subscribe()
 
   let expecter2 = new CallbackExpecter<string>()
-  new StateListener(expecter2.accept, db2, 'key')
+  let stateListener2 = new StateListener({
+    callback: expecter2.accept,
+    db: db2,
+    key: 'key'
+  })
+  stateListener2.subscribe()
 
   stateListener.setStateOptimistic('foo')
   let result = await expecter.expect('Optimistic set not received.')

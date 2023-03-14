@@ -9,7 +9,7 @@ import {
   uniqueClientId,
   WrappedPresenceMessage
 } from 'driftdb'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 
 const ROOM_ID_KEY = '_driftdb_room'
 
@@ -21,11 +21,14 @@ const ROOM_ID_KEY = '_driftdb_room'
 export function DriftDBProvider(props: {
   /** Elements under the provider in the tree. */
   children: React.ReactNode
+
   /** The URL of the DriftDB API. */
   api: string
+
   /** The room ID to connect to. If not provided, attempts to extract the room ID
    *  from the URL and creates a new room if one is not present. */
   room?: string
+
   /** Whether to use binary messages (enables raw typed arrays in messages). */
   useBinary?: boolean
 }): React.ReactElement {
@@ -65,7 +68,7 @@ export function DriftDBProvider(props: {
     return () => {
       dbRef.current?.disconnect()
     }
-  }, [])
+  }, [props.room, props.useBinary, props.api])
 
   return <DatabaseContext.Provider value={dbRef.current}>{props.children}</DatabaseContext.Provider>
 }
@@ -108,19 +111,30 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
   const db = useDatabase()
   const [state, setInnerState] = React.useState<T>(initialValue)
 
-  const stateListener = useRef<StateListener<T>>(null)
-  if (stateListener.current === null) {
-    ;(stateListener as any).current = new StateListener(setInnerState, db, key)
-  }
+  const stateListener = useRef<StateListener<SetStateAction<T>> | null>(null)
+
+  useEffect(() => {
+    stateListener.current = new StateListener({
+      key,
+      db,
+      callback: setInnerState
+    })
+
+    stateListener.current!.subscribe()
+
+    return () => {
+      stateListener.current!.destroy()
+    }
+  }, [])
 
   const setState = useCallback(
     (value: T | ((v: T) => T)) => {
       if (typeof value === 'function') {
         const currentValue = stateListener.current!.state ?? initialValue
         const newValue = (value as any)(currentValue)
-        stateListener.current!.setStateOptimistic(newValue)
+        stateListener.current?.setStateOptimistic(newValue)
       } else {
-        stateListener.current!.setStateOptimistic(value)
+        stateListener.current?.setStateOptimistic(value)
       }
     },
     [initialValue]
@@ -255,6 +269,14 @@ export function useSharedReducer<State, Action>(
     })
   }
 
+  useEffect(() => {
+    reducerRef.current!.subscribe()
+
+    return () => {
+      reducerRef.current!.destroy()
+    }
+  }, [])
+
   const dispatch = reducerRef.current.dispatch
 
   return [state, dispatch]
@@ -335,6 +357,14 @@ export function usePresence<T>(key: string, value: T): Record<string, WrappedPre
       callback: setPresence
     })
   }
+
+  useEffect(() => {
+    presenceListener.current!.subscribe()
+
+    return () => {
+      presenceListener.current!.destroy()
+    }
+  }, [presenceListener.current])
 
   presenceListener.current.updateState(value)
 
