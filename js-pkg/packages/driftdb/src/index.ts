@@ -27,7 +27,7 @@ export class DbConnection {
   reconnectLoopHandle: ReturnType<typeof setTimeout> | null = null
   activeLatencyTest: LatencyTest | null = null
   cbor = false
-  teardown = false
+  closed = false
 
   /**
    * Connect to a DriftDB room.
@@ -75,7 +75,7 @@ export class DbConnection {
     }
 
     this.connection.onerror = (err: any) => {
-      if (!this.teardown) {
+      if (!this.closed) {
         this.setStatus(false)
         reject(err)
       }
@@ -165,7 +165,7 @@ export class DbConnection {
    * Close the connection to the DriftDB room.
    */
   disconnect() {
-    this.teardown = true
+    this.closed = true
     if (this.connection !== null) {
       this.connection.onclose = null
       this.connection.onerror = null

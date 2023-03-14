@@ -54,7 +54,10 @@ function useYDoc(key: string) {
       compactor.current!.dispatch(update)
     })
   
-  }, [compactor.current])
+    return () => {
+      compactor.current!.destroy()
+    }
+  }, [])
 
   return compactor.current.state
 }

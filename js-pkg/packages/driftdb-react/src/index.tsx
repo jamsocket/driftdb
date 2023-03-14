@@ -113,22 +113,28 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
 
   const stateListener = useRef<StateListener<SetStateAction<T>> | null>(null)
 
-  if (stateListener.current === null) {
-    stateListener.current = new StateListener(setInnerState, db, key)
-  }
-
   useEffect(() => {
+    stateListener.current = new StateListener({
+      key,
+      db,
+      callback: setInnerState,
+    })
+
     stateListener.current!.subscribe()
-  }, [stateListener.current])
+
+    return () => {
+      stateListener.current!.destroy()
+    }
+  }, [])
 
   const setState = useCallback(
     (value: T | ((v: T) => T)) => {
       if (typeof value === 'function') {
         const currentValue = stateListener.current!.state ?? initialValue
         const newValue = (value as any)(currentValue)
-        stateListener.current!.setStateOptimistic(newValue)
+        stateListener.current?.setStateOptimistic(newValue)
       } else {
-        stateListener.current!.setStateOptimistic(value)
+        stateListener.current?.setStateOptimistic(value)
       }
     },
     [initialValue]
@@ -269,7 +275,7 @@ export function useSharedReducer<State, Action>(
     return () => {
       reducerRef.current!.destroy()
     }
-  }, [reducerRef.current])
+  }, [])
 
   const dispatch = reducerRef.current.dispatch
 
