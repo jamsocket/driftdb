@@ -40,10 +40,10 @@ function Nav({ isDesktop, curRoute }: { isDesktop?: boolean; curRoute: string })
         'flex-1 overflow-y-auto pt-5 pb-4'
       )}
     >
-      <a href="/" className="flex flex-shrink-0 items-center px-4 gap-4">
+      <Link href="/" className="flex flex-shrink-0 items-center px-4 gap-4">
         <Logo className="h-8 w-8" />
         <h1 className="text-gray-200 text-lg font-extrabold">DriftDB Demos</h1>
-      </a>
+      </Link>
       <nav className={classNames(isDesktop ? 'text-base' : 'flex-1 text-sm', 'mt-5 px-2')}>
         <h3 className="text-gray-500 text-xs uppercase">Basic</h3>
         <ul>
