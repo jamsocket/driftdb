@@ -15,11 +15,14 @@ export abstract class Compactable<T, A> {
   abstract initialState(): T
 
   optimistic: boolean = false
+
+  /// This should be true only if the reducer is commutative and idempotent.
+  crdt: boolean = false
 }
 
 export class Compactor<T, A> {
-  state: any
-  lastConfirmedState: any
+  state: T
+  lastConfirmedState: T | null
   lastConfirmedSeq: number
   db: DbConnection
   key: string
@@ -47,8 +50,8 @@ export class Compactor<T, A> {
   }) {
     this.compactable = opts.compactable
     const state = this.compactable.initialState()
-    this.lastConfirmedState = state
-    this.state = structuredClone(state)
+    this.lastConfirmedState = null
+    this.state = state
     this.lastConfirmedSeq = 0
     this.db = opts.db
     this.randId = Math.random().toString(36).substring(7)
@@ -62,7 +65,16 @@ export class Compactor<T, A> {
     this.dispatch = this.dispatch.bind(this)
   }
 
+  maybeClone(state: T): T {
+    if (this.compactable.crdt) {
+      return state
+    } else {
+      return structuredClone(state)
+    }
+  }
+
   subscribe() {
+    this.lastConfirmedState = this.maybeClone(this.state)
     this.db.subscribe(this.key, this.onSequenceValue, this.onSize)
   }
 
@@ -92,22 +104,22 @@ export class Compactor<T, A> {
     const value = sequenceValue.value as any
 
     if (value.reset !== undefined) {
-      this.lastConfirmedState = value.reset as T
+      this.lastConfirmedState = this.compactable.unpackState(value.reset)
       this.lastConfirmedSeq = sequenceValue.seq
-      this.state = structuredClone(this.lastConfirmedState)
+      this.state = this.maybeClone(this.lastConfirmedState)
       this.callback(this.state)
       return
     }
 
     if (value.apply !== undefined) {
       this.lastConfirmedState = this.compactable.applyAction(
-        this.lastConfirmedState,
+        this.lastConfirmedState!,
         value.apply as A
       )
       this.lastConfirmedSeq = sequenceValue.seq
 
       if (value.i !== this.randId || !this.compactable.optimistic) {
-        this.state = structuredClone(this.lastConfirmedState)
+        this.state = this.maybeClone(this.lastConfirmedState)
         this.callback(this.state)
       }
       return
@@ -118,10 +130,11 @@ export class Compactor<T, A> {
 
   onSize(size: number) {
     if (size > this.sizeThreshold && this.lastConfirmedSeq !== 0) {
+      const newState = this.compactable.packState(this.lastConfirmedState!)
       this.db?.send({
         type: 'push',
         action: { type: 'compact', seq: this.lastConfirmedSeq },
-        value: { reset: this.lastConfirmedState },
+        value: { reset: newState },
         key: this.key
       })
     }

@@ -2,57 +2,61 @@ import { DRIFTDB_URL } from '../config'
 import { DbConnection } from 'driftdb'
 import { DriftDBProvider, RoomQRCode, StatusIndicator, useDatabase } from 'driftdb-react'
 import Head from 'next/head'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as Y from 'yjs'
 import 'codemirror/lib/codemirror.css'
 import type { Editor } from 'codemirror'
+import { Compactable, Compactor } from 'driftdb/dist/compactor'
 
-class DriftYjsProvider {
-  constructor(private db: DbConnection, key: string, public doc: Y.Doc, onUpdate: () => void) {
-    let lastSeq = 0
+class YDocCompactable extends Compactable<Y.Doc, Uint8Array> {
+  optimistic: boolean = true
 
-    this.db.subscribe(
-      key,
-      (data) => {
-        Y.applyUpdate(doc, data.value as Uint8Array)
-        lastSeq = data.seq
-      },
-      (size: number) => {
-        if (size > 30) {
-          // compact
-          let update = Y.encodeStateAsUpdate(doc)
-          this.db.send({
-            type: 'push',
-            key: key,
-            value: update,
-            action: { type: 'compact', seq: lastSeq }
-          })
-        }
-      }
-    )
-
-    doc.on('update', (update: Uint8Array) => {
-      this.db.send({
-        type: 'push',
-        key: key,
-        value: update,
-        action: { type: 'append' }
-      })
-      onUpdate()
-    })
+  initialState(): Y.Doc {
+    return new Y.Doc()
   }
+
+  applyAction(doc: Y.Doc, update: Uint8Array): Y.Doc {
+    Y.applyUpdate(doc, update)
+    return doc
+  }
+
+  packState(state: Y.Doc) {
+    return Y.encodeStateAsUpdate(state)
+  }
+
+  unpackState(update: Uint8Array) {
+    const doc = new Y.Doc()
+    Y.applyUpdate(doc, update)
+    return doc
+  }
+
+  crdt = true
 }
 
 function useYDoc(key: string) {
   const [_, setVersion] = useState(0)
   const db = useDatabase()
-  const provider = useRef<DriftYjsProvider | null>(null)
-  if (provider.current == null) {
-    const doc = new Y.Doc()
-    provider.current = new DriftYjsProvider(db, key, doc, () => setVersion((i) => i + 1))
+  const compactor = useRef<Compactor<Y.Doc, Uint8Array> | null>(null)
+  if (compactor.current == null) {
+    compactor.current = new Compactor({
+      db,
+      key,
+      compactable: new YDocCompactable(),
+      callback: () => setVersion((i) => i + 1),
+    })
   }
 
-  return provider.current.doc
+  useEffect(() => {
+    compactor.current!.subscribe()
+    const doc = compactor.current!.state
+
+    doc.on('update', (update: Uint8Array) => {
+      compactor.current!.dispatch(update)
+    })
+  
+  }, [compactor.current])
+
+  return compactor.current.state
 }
 
 function CrdtDemo() {
