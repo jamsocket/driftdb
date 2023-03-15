@@ -1,3 +1,7 @@
+---
+sidebar_position: 8
+---
+
 # Data Model
 
 The DriftDB client libraries (vanilla JS and [React](/docs/react)) provide abstractions for working with state, like presence, state machines, and key-value

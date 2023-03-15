@@ -28,7 +28,8 @@ const config = {
         id: 'vanilla-docs',
         out: 'vanilla-api',
         sidebar: {
-          categoryLabel: 'Vanilla JS API',
+          categoryLabel: 'Vanilla JS API Reference',
+          position: 10,
         },
         entryPoints: ['../js-pkg/packages/driftdb/src/index.ts'],
         tsconfig: '../js-pkg/packages/driftdb/tsconfig.json',
@@ -41,7 +42,8 @@ const config = {
         id: 'react-docs',
         out: 'react-api',
         sidebar: {
-          categoryLabel: 'React API',
+          categoryLabel: 'React API Reference',
+          position: 11,
         },
         entryPoints: ['../js-pkg/packages/driftdb-react/src/index.tsx'],
         tsconfig: '../js-pkg/packages/driftdb-react/tsconfig.json',
