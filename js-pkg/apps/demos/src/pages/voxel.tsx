@@ -7,7 +7,7 @@ import { Vector3, Vector3Tuple } from 'three'
 import { CompactPicker } from 'react-color'
 
 const DIM = 15
-const TRANSITION_RATE = 0.07
+const TRANSITION_RATE = 0.08
 
 interface Voxel {
   position: Vector3Tuple
