@@ -30,7 +30,7 @@ const demos = [
   },
   {
     title: 'WebRTC Chat',
-    href: '/webrtc-demo',
+    href: '/webrtc',
     description: 'Simple chat with WebRTC datachannels, using DriftDB for signaling.'
   }
 ]

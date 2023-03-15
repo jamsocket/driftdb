@@ -1,17 +1,78 @@
 import { DRIFTDB_URL } from '../config'
 import { OrbitControls } from '@react-three/drei'
-import { Canvas, ThreeEvent } from '@react-three/fiber'
+import { Canvas, ThreeEvent, useFrame } from '@react-three/fiber'
 import { DriftDBProvider, usePresence, useSharedReducer } from 'driftdb-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Vector3, Vector3Tuple } from 'three'
 import { CompactPicker } from 'react-color'
 
 const DIM = 15
+const TRANSITION_DURATION_MS = 0.3
 
 interface Voxel {
   position: Vector3Tuple
   color: any
   opacity: number
+}
+
+interface MidTransition {
+  startPosition: Vector3Tuple
+  delta: Vector3Tuple
+  start: number | null
+}
+
+function MovingVoxel(props: { voxel: Voxel; name?: string }) {
+  const [position, setPosition] = useState<Vector3Tuple>([0, 0, 0]) // this gets set before the first paint
+  const transitionRef = useRef<MidTransition | null>(null)
+
+  useFrame(({ clock }) => {
+    if (transitionRef.current) {
+      if (!transitionRef.current.start) {
+        transitionRef.current.start = clock.getElapsedTime()
+      }
+      const t = (clock.getElapsedTime() - transitionRef.current.start) / TRANSITION_DURATION_MS
+      const p = transitionRef.current.startPosition
+      const d = transitionRef.current.delta
+
+      const x = p[0] + d[0] * t
+      const y = p[1] + d[1] * t
+      const z = p[2] + d[2] * t
+
+      setPosition([x, y, z])
+
+      if (t > 1) {
+        transitionRef.current = null
+      }
+    }
+  })
+
+  useLayoutEffect(() => {
+    const delta: Vector3Tuple = [
+      props.voxel.position[0] - position[0],
+      props.voxel.position[1] + 0.5 - position[1],
+      props.voxel.position[2] - position[2]
+    ]
+
+    if (delta[0] !== 0 || delta[1] !== 0 || delta[2] !== 0) {
+      transitionRef.current = {
+        startPosition: position,
+        delta,
+        start: null
+      }
+    }
+  }, [props.voxel.position])
+
+  return (
+    <mesh name={props.name} position={position} scale={1}>
+      <boxGeometry args={[1, 1, 1]} />
+
+      <meshPhongMaterial
+        color={props.voxel.color}
+        opacity={props.voxel.opacity}
+        transparent={props.voxel.opacity < 1}
+      />
+    </mesh>
+  )
 }
 
 function Voxel(props: { voxel: Voxel; name?: string }) {
@@ -160,7 +221,7 @@ export function VoxelEditor() {
             if (user.value.position === null) return null
 
             return (
-              <Voxel
+              <MovingVoxel
                 key={id}
                 voxel={{ position: user.value.position, color: user.value.color, opacity: 0.5 }}
               />
