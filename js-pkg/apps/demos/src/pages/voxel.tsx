@@ -1,17 +1,69 @@
 import { DRIFTDB_URL } from '../config'
 import { OrbitControls } from '@react-three/drei'
-import { Canvas, ThreeEvent } from '@react-three/fiber'
+import { Canvas, ThreeEvent, useFrame } from '@react-three/fiber'
 import { DriftDBProvider, usePresence, useSharedReducer } from 'driftdb-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Vector3, Vector3Tuple } from 'three'
 import { CompactPicker } from 'react-color'
 
 const DIM = 15
+const TRANSITION_RATE = 0.08
 
 interface Voxel {
   position: Vector3Tuple
   color: any
   opacity: number
+}
+
+function MovingVoxel(props: { voxel: Voxel; name?: string }) {
+  const [position, setPosition] = useState<Vector3Tuple>([0, 0, 0]) // this gets set before the first paint
+  const destPositionRef = useRef<Vector3Tuple | null>(null)
+
+  useFrame(() => {
+    if (destPositionRef.current) {
+      const delta = [
+        destPositionRef.current[0] - position[0],
+        destPositionRef.current[1] - position[1],
+        destPositionRef.current[2] - position[2]
+      ]
+
+      const x = position[0] + delta[0] * TRANSITION_RATE
+      const y = position[1] + delta[1] * TRANSITION_RATE
+      const z = position[2] + delta[2] * TRANSITION_RATE
+
+      setPosition([x, y, z])
+
+      const squaredDist = delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]
+      if (squaredDist < 0.00001) {
+        destPositionRef.current = null
+      }
+    }
+  })
+
+  useLayoutEffect(() => {
+    const dest: Vector3Tuple = [
+      props.voxel.position[0],
+      props.voxel.position[1] + 0.5,
+      props.voxel.position[2]
+    ]
+
+    const squaredDist = Math.pow(dest[0] - position[0], 2) + Math.pow(dest[1] - position[1], 2) + Math.pow(dest[2] - position[2], 2)
+    if (squaredDist > 0.00001) {
+      destPositionRef.current = dest
+    }
+  }, [props.voxel.position])
+
+  return (
+    <mesh name={props.name} position={position} scale={1}>
+      <boxGeometry args={[1, 1, 1]} />
+
+      <meshPhongMaterial
+        color={props.voxel.color}
+        opacity={props.voxel.opacity}
+        transparent={props.voxel.opacity < 1}
+      />
+    </mesh>
+  )
 }
 
 function Voxel(props: { voxel: Voxel; name?: string }) {
@@ -160,7 +212,7 @@ export function VoxelEditor() {
             if (user.value.position === null) return null
 
             return (
-              <Voxel
+              <MovingVoxel
                 key={id}
                 voxel={{ position: user.value.position, color: user.value.color, opacity: 0.5 }}
               />
