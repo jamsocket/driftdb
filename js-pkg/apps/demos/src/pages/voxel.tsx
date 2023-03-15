@@ -7,7 +7,7 @@ import { Vector3, Vector3Tuple } from 'three'
 import { CompactPicker } from 'react-color'
 
 const DIM = 15
-const TRANSITION_DURATION_MS = 0.3
+const TRANSITION_RATE = 0.07
 
 interface Voxel {
   position: Vector3Tuple
@@ -15,50 +15,41 @@ interface Voxel {
   opacity: number
 }
 
-interface MidTransition {
-  startPosition: Vector3Tuple
-  delta: Vector3Tuple
-  start: number | null
-}
-
 function MovingVoxel(props: { voxel: Voxel; name?: string }) {
   const [position, setPosition] = useState<Vector3Tuple>([0, 0, 0]) // this gets set before the first paint
-  const transitionRef = useRef<MidTransition | null>(null)
+  const destPositionRef = useRef<Vector3Tuple | null>(null)
 
-  useFrame(({ clock }) => {
-    if (transitionRef.current) {
-      if (!transitionRef.current.start) {
-        transitionRef.current.start = clock.getElapsedTime()
-      }
-      const t = (clock.getElapsedTime() - transitionRef.current.start) / TRANSITION_DURATION_MS
-      const p = transitionRef.current.startPosition
-      const d = transitionRef.current.delta
+  useFrame(() => {
+    if (destPositionRef.current) {
+      const delta = [
+        destPositionRef.current[0] - position[0],
+        destPositionRef.current[1] - position[1],
+        destPositionRef.current[2] - position[2]
+      ]
 
-      const x = p[0] + d[0] * t
-      const y = p[1] + d[1] * t
-      const z = p[2] + d[2] * t
+      const x = position[0] + delta[0] * TRANSITION_RATE
+      const y = position[1] + delta[1] * TRANSITION_RATE
+      const z = position[2] + delta[2] * TRANSITION_RATE
 
       setPosition([x, y, z])
 
-      if (t > 1) {
-        transitionRef.current = null
+      const squaredDist = delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]
+      if (squaredDist < 0.00001) {
+        destPositionRef.current = null
       }
     }
   })
 
   useLayoutEffect(() => {
-    const delta: Vector3Tuple = [
-      props.voxel.position[0] - position[0],
-      props.voxel.position[1] + 0.5 - position[1],
-      props.voxel.position[2] - position[2]
+    const dest: Vector3Tuple = [
+      props.voxel.position[0],
+      props.voxel.position[1] + 0.5,
+      props.voxel.position[2]
     ]
 
-    if (delta[0] !== 0 || delta[1] !== 0 || delta[2] !== 0) {
-      transitionRef.current = {
-        startPosition: position,
-        delta,
-        start: null
-      }
+    const squaredDist = Math.pow(dest[0] - position[0], 2) + Math.pow(dest[1] - position[1], 2) + Math.pow(dest[2] - position[2], 2)
+    if (squaredDist > 0.00001) {
+      destPositionRef.current = dest
     }
   }, [props.voxel.position])
 
