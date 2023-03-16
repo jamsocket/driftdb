@@ -9,7 +9,7 @@ export const useWebRTCMessagingChannel = (p1, p2) => {
     (conn) => {
       let dataChannel = conn.createDataChannel(p1)
       dataChannel.onmessage = (e) => {
-        addMessage({ id: e.timeStamp, text: e.data })
+        addMessage({ id: e.timeStamp, text: e.data, timestamp: Date.now() })
       }
 
       conn.ondatachannel = (e) => {

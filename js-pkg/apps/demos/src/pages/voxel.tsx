@@ -47,7 +47,10 @@ function MovingVoxel(props: { voxel: Voxel; name?: string }) {
       props.voxel.position[2]
     ]
 
-    const squaredDist = Math.pow(dest[0] - position[0], 2) + Math.pow(dest[1] - position[1], 2) + Math.pow(dest[2] - position[2], 2)
+    const squaredDist =
+      Math.pow(dest[0] - position[0], 2) +
+      Math.pow(dest[1] - position[1], 2) +
+      Math.pow(dest[2] - position[2], 2)
     if (squaredDist > 0.00001) {
       destPositionRef.current = dest
     }
