@@ -1,5 +1,4 @@
 import { DRIFTDB_URL } from '../config'
-import { DbConnection } from 'driftdb'
 import { DriftDBProvider, RoomQRCode, StatusIndicator, useDatabase } from 'driftdb-react'
 import Head from 'next/head'
 import { useCallback, useEffect, useRef, useState } from 'react'
