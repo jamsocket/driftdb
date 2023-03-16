@@ -69,7 +69,7 @@ function CrdtDemo() {
     (ref: HTMLTextAreaElement | null) => {
       if (ref == null) {
         if (editorRef.current != null) {
-          ;(editorRef.current as any).toTextArea()
+          ; (editorRef.current as any).toTextArea()
           editorRef.current = null
         }
         return
@@ -108,9 +108,13 @@ export default function Demos() {
       </Head>
       <div>
         <DriftDBProvider api={DRIFTDB_URL} useBinary={true}>
-          <StatusIndicator />
           <CrdtDemo />
-          <RoomQRCode />
+          <div className="flex flex-col gap-4 sm:max-w-sm border border-gray-300 bg-gray-200 p-6 rounded-3xl">
+            <StatusIndicator />
+            <div className="overflow-hidden rounded-3xl">
+              <RoomQRCode />
+            </div>
+          </div>
         </DriftDBProvider>
       </div>
     </>
