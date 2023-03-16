@@ -44,7 +44,8 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ')
 }
 
-function ticTacToeReducer(state: GameState, action: ActionType): GameState {
+function ticTacToeReducer(oldState: GameState, action: ActionType): GameState {
+  const state = structuredClone(oldState)
   switch (action.type) {
     case 'reset':
       return structuredClone(INITIAL_STATE)
@@ -248,7 +249,7 @@ export default function TicTacToe() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div>
-        <DriftDBProvider api={DRIFTDB_URL} useBinary={true}>
+        <DriftDBProvider api={DRIFTDB_URL}>
           <h1 className="text-2xl font-bold text-gray-800">DriftDB - Tic Tac Toe Demo</h1>
           <TicTacToeDemo />
           <div className="flex flex-col gap-4 sm:max-w-sm border border-gray-300 bg-gray-200 p-6 rounded-3xl">
