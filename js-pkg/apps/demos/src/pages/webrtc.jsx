@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { DriftDBProvider, usePresence, useLatency } from 'driftdb-react'
+import { DriftDBProvider, usePresence, useLatency, StatusIndicator, RoomQRCode } from 'driftdb-react'
 import { Chat } from '../components/chat.jsx'
 import { DRIFTDB_URL } from '../config'
 
@@ -71,6 +71,12 @@ const App = () => {
   return (
     <DriftDBProvider api={DRIFTDB_URL}>
       <RTCArea />
+      <div className="flex flex-col gap-4 sm:max-w-sm border border-gray-300 bg-gray-200 p-6 rounded-3xl">
+        <StatusIndicator />
+        <div className="overflow-hidden rounded-3xl">
+          <RoomQRCode />
+        </div>
+      </div>
     </DriftDBProvider>
   )
 }
