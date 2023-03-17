@@ -1,0 +1,1 @@
+export function WebRTCBroadcastChannel(db: any, id: any): any;

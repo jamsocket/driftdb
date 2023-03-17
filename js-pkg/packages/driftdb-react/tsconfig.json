@@ -1,14 +1,14 @@
 {
-  "extends": "../tsconfig/react-library.json",
-  "include": [
-      "."
-  ],
-  "exclude": [
-      "dist",
-      "build",
-      "node_modules"
-  ],
-  "references": [
-    { "path": "../driftdb" }
-  ]
+    "extends": "../tsconfig/react-library.json",
+    "include": [
+	"."
+    ],
+    "exclude": [
+	"dist",
+	"build",
+	"node_modules"
+    ],
+    "references": [
+	{ "path": "../driftdb" }
+    ]
 }

@@ -1,17 +1,8 @@
-import {
-  Api,
-  ConnectionStatus,
-  DbConnection,
-  PresenceListener,
-  Reducer,
-  RoomResult,
-  StateListener,
-  uniqueClientId,
-  WrappedPresenceMessage
-} from 'driftdb'
-import React, { SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
+import { Api, ConnectionStatus, DbConnection, PresenceListener, Reducer, RoomResult, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb";
+import React, { useCallback, useEffect, useRef, SetStateAction, useState } from "react";
+import { WebRTCBroadcastChannel } from './webrtc2'
 
-const ROOM_ID_KEY = '_driftdb_room'
+const ROOM_ID_KEY = "_driftdb_room"
 
 function getRoomId(): string | null {
   const url = new URL(document.location.href)
@@ -95,14 +86,16 @@ export const DatabaseContext = React.createContext<DbConnection | null>(null)
  * @returns A handle to the current database connection.
  */
 export function useDatabase(): DbConnection {
-  const db = React.useContext(DatabaseContext)
-  if (db === null) {
-    throw new Error('useDatabase must be used within a DriftDBProvider')
-  }
-  return db
+    const db = React.useContext(DatabaseContext);
+    if (db === null) {
+        throw new Error("useDatabase must be used within a DriftDBProvider");
+    }
+    return db;
 }
 
-type SetterFunction<T> = (value: T | ((v: T) => T)) => void
+
+type SetterFunction<T> = (value: T | ((v: T) => T)) => void;
+
 
 /**
  * A React hook that returns the current value of a shared state variable, and a function
@@ -151,6 +144,8 @@ export function useSharedState<T>(key: string, initialValue: T): [T, SetterFunct
   return [state, setState]
 }
 
+
+
 /**
  * A React component that displays a QR code containing the current URL, including the room ID.
  * If there is no room ID in the URL, this component will not render anything.
@@ -187,216 +182,140 @@ export function RoomQRCode(): React.ReactElement {
  * @returns A unique client ID.
  */
 export function useUniqueClientId(): string {
-  const currentId = useRef<string>()
+    const currentId = useRef<string>()
 
-  if (typeof window === 'undefined') {
-    return null!
-  }
-
-  if (!currentId.current) {
-    currentId.current = uniqueClientId()
-  }
-  return currentId.current!
-}
-
-export function useSharedReducer<State, Action>(
-  key: string,
-  reducer: (state: State, action: Action) => State,
-  initialValue: State
-): [State, (action: Action) => void]
-
-export function useSharedReducer<State, Action, InitialValue>(
-  key: string,
-  reducer: (state: State, action: Action) => State,
-  initialValue: InitialValue,
-  init: (initialValue: InitialValue) => State
-): [State, (action: Action) => void]
-
-/**
- * A React hook that returns a reducer state variable, and a function to update it. The state
- * variable is identified by a key, which must be unique within the current room.
- *
- * @param key The key that uniquely identifies the state variable within the current room.
- * @param reducer A reducer function that will be used to update the state variable.
- * @param initialValue The initial value of the state variable (if `init` is not passed),
- * or the value passed into `init` to produce the initial value.
- * @param init An optional function that will be used to produce the initial value of the
- * state variable.
- */
-export function useSharedReducer<State, Action>(
-  key: string,
-  reducer: (state: State, action: Action) => State,
-  initialValue: unknown,
-  init: (v: any) => State = (a: any) => a
-): [State, (action: Action) => void] {
-  const db = useDatabase()
-
-  const initialStateRef = useRef<State>(null!)
-  if (initialStateRef.current === null) {
-    initialStateRef.current = structuredClone(init(initialValue))
-  }
-
-  const [state, setState] = React.useState<State>(initialStateRef.current)
-
-  const reducerRef = React.useRef<Reducer<State, Action> | null>(null)
-  if (reducerRef.current === null) {
-    reducerRef.current = new Reducer({
-      key,
-      reducer,
-      initialValue: initialStateRef.current,
-      sizeThreshold: 30,
-      db,
-      callback: setState
-    })
-  }
-
-  useEffect(() => {
-    reducerRef.current!.subscribe()
-
-    return () => {
-      reducerRef.current!.destroy()
+    if (typeof window === "undefined") {
+        return null!
     }
-  }, [])
 
-  const dispatch = reducerRef.current.dispatch
-
-  return [state, dispatch]
+    if (!currentId.current) {
+        currentId.current = uniqueClientId()
+    }
+    return currentId.current
 }
 
-/**
- * A React hook that returns the current connection status of the database
- * from the current `DriftDBProvider`.
- * The result is an object with a `connected` property that is `true` if the
- * database is connected to the server. When `connected` is `true`, a `debugUrl`
- * property is also returned.
- *
- * @returns The current connection status of the database.
- */
+export function useSharedReducer<State, Action>(key: string, reducer: (state: State, action: Action) => State, initialValue: State): [State, (action: Action) => void];
+export function useSharedReducer<State, Action, InitialValue>(key: string, reducer: (state: State, action: Action) => State, initialValue: InitialValue, init: (initialValue: InitialValue) => State): [State, (action: Action) => void];
+
+export function useSharedReducer<State, Action>(key: string, reducer: (state: State, action: Action) => State, initialValue: unknown, init: ((v: any) => State) = (a: any) => a): [State, (action: Action) => void] {
+    const db = useDatabase();
+
+    const initialStateRef = useRef<State>(null!)
+    if (initialStateRef.current === null) {
+        initialStateRef.current = structuredClone(init(initialValue))
+    }
+
+    const [state, setState] = React.useState<State>(initialStateRef.current);
+
+    const reducerRef = React.useRef<Reducer<State, Action> | null>(null)
+    if (reducerRef.current === null) {
+        reducerRef.current = new Reducer({
+            key,
+            reducer,
+            initialValue: initialStateRef.current,
+            sizeThreshold: 30,
+            db,
+            callback: setState
+        })
+    }
+
+    const dispatch = reducerRef.current.dispatch;
+
+    return [state, dispatch];
+}
+
 export function useConnectionStatus(): ConnectionStatus {
-  const db = useDatabase()
-  const [status, setStatus] = React.useState<ConnectionStatus>({ connected: false })
+    const db = useDatabase();
+    const [status, setStatus] = React.useState<ConnectionStatus>({ connected: false });
 
-  React.useEffect(() => {
-    const callback = (event: ConnectionStatus) => {
-      setStatus(event)
-    }
-    db?.statusListener.addListener(callback)
-    return () => {
-      db?.statusListener.removeListener(callback)
-    }
-  }, [db])
+    React.useEffect(() => {
+        const callback = (event: ConnectionStatus) => {
+            setStatus(event);
+        };
+        db?.statusListener.addListener(callback);
+        return () => {
+            db?.statusListener.removeListener(callback);
+        };
+    }, [db]);
 
-  return status
+    return status;
 }
 
-/**
- * A React hook that measures the latency of the database connection in a
- * loop and returns the current latency in milliseconds, or `null` before
- * the first measurement.
- */
 export function useLatency(): number | null {
-  const db = useDatabase()
-  const [latency, setLatency] = useState<number | null>(null!)
+    const db = useDatabase();
+    const [latency, setLatency] = useState<number | null>(null!);
 
-  React.useEffect(() => {
-    const updateLatency = async () => {
-      const result = await db?.testLatency()
-      setLatency(result)
-    }
+    React.useEffect(() => {
+        const updateLatency = async () => {
+            const result = await db?.testLatency();
+            setLatency(result);
+        }
 
-    const interval = setInterval(updateLatency, 5000)
-    updateLatency()
+        const interval = setInterval(updateLatency, 5000);
+        updateLatency();
 
-    return () => {
-      clearInterval(interval)
-    }
-  }, [db])
+        return () => {
+            clearInterval(interval);
+        }
+    }, [db]);
 
-  return latency
+    return latency;
 }
 
-/**
- * A React hook that returns a map of the current presence of all clients in the current room.
- * The client also passes its own value, which will be included in the map for other clients.
- *
- * @param key The key that uniquely identifies the presence variable within the current room.
- * @param value The value that will be included in the map for other clients.
- * @returns A map of the current presence of all clients in the current room.
- */
 export function usePresence<T>(key: string, value: T): Record<string, WrappedPresenceMessage<T>> {
-  const db = useDatabase()
-  const clientId = useUniqueClientId()
-  const [presence, setPresence] = useState<Record<string, WrappedPresenceMessage<T>>>({})
+    const db = useDatabase()
+    const clientId = useUniqueClientId()
+    const [presence, setPresence] = useState<Record<string, WrappedPresenceMessage<T>>>({})
 
-  const presenceListener = useRef<PresenceListener<T>>()
-  if (presenceListener.current === undefined) {
-    presenceListener.current = new PresenceListener({
-      key,
-      db,
-      clientId,
-      initialState: value,
-      callback: setPresence
-    })
-  }
-
-  useEffect(() => {
-    presenceListener.current!.subscribe()
-
-    return () => {
-      presenceListener.current!.destroy()
+    const presenceListener = useRef<PresenceListener<T>>()
+    if (presenceListener.current === undefined) {
+        presenceListener.current = new PresenceListener({
+            key,
+            db,
+            clientId,
+            initialState: value,
+            callback: setPresence,
+        })
     }
-  }, [presenceListener.current])
 
-  presenceListener.current.updateState(value)
+    presenceListener.current.updateState(value)
 
-  return presence
+    return presence
 }
 
-/**
- * A React component that displays the current connection status of the database.
- */
-export function StatusIndicator(): React.ReactElement {
-  const status = useConnectionStatus()
-  const latency = useLatency()
-  const latencyStr = latency === null ? '...' : Math.round(latency).toString()
+export function StatusIndicator() {
+    const status = useConnectionStatus();
+    const latency = useLatency();
+    const latencyStr = latency === null ? "..." : Math.round(latency).toString();
 
-  let color
-  if (status.connected) {
-    color = 'green'
-  } else {
-    color = 'red'
-  }
+    let color
+    if (status.connected) {
+        color = "green"
+    } else {
+        color = "red"
+    }
 
-  return (
-    <div
-      style={{
-        display: 'inline-block',
-        border: '1px solid #ccc',
-        background: '#eee',
-        borderRadius: 10,
-        padding: 10
-      }}
-    >
-      DriftDB status:{' '}
-      <span style={{ color, fontWeight: 'bold' }}>
-        {status.connected ? 'Connected' : 'Disconnected'}
-      </span>
-      {status.connected ? (
-        <>
-          {' '}
-          <span style={{ fontSize: '70%', color: '#aaa' }}>
-            <a
-              target="_blank"
-              rel="noreferrer"
-              style={{ textDecoration: 'none', color: '#aaa' }}
-              href={status.debugUrl}
-            >
-              (ui)
-            </a>
-            ({latencyStr}ms)
-          </span>
-        </>
-      ) : null}
-    </div>
-  )
+    return (
+        <div style={{ display: 'inline-block', border: '1px solid #ccc', background: '#eee', borderRadius: 10, padding: 10 }}>
+            DriftDB status: <span style={{ color, fontWeight: 'bold' }}>{status.connected ? "Connected" : "Disconnected"}</span>
+            {
+                status.connected ? <>
+                    {" "}<span style={{ fontSize: '70%', color: '#aaa' }}>
+                        <a target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#aaa' }} href={status.debugUrl}>(ui)</a>
+                        ({latencyStr}ms)
+                    </span>
+                </> : null
+            }
+        </div>
+    );
+}
+
+export function useWebRtcBroadcastChannel() {
+    const db = useDatabase()
+    const myid = useUniqueClientId()
+    const WebRtcBroadcastChannelRef = React.useRef(null)
+    React.useEffect(() => {
+	WebRtcBroadcastChannelRef.current = WebRTCBroadcastChannel(db, myid)
+    }, [])
+    return WebRtcBroadcastChannelRef.current
 }
