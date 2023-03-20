@@ -12,7 +12,7 @@
     "bun-types": "^0.5.7",
     "driftdb-internal": "*"
   },
-  "devDependencies": {
+  "optionalDependencies": {
     "bun": "^0.5.7"
   }
 }
