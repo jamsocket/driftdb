@@ -1,17 +1,8 @@
-import {
-  Api,
-  ConnectionStatus,
-  DbConnection,
-  PresenceListener,
-  Reducer,
-  RoomResult,
-  StateListener,
-  uniqueClientId,
-  WrappedPresenceMessage
-} from 'driftdb'
-import React, { SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
+import { Api, ConnectionStatus, DbConnection, PresenceListener, Reducer, RoomResult, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb";
+import React, { useCallback, useEffect, useRef, SetStateAction, useState } from "react";
+import { WebRTCBroadcastChannel } from './webrtc2'
 
-const ROOM_ID_KEY = '_driftdb_room'
+const ROOM_ID_KEY = "_driftdb_room"
 
 function getRoomId(): string | null {
   const url = new URL(document.location.href)
@@ -313,12 +304,20 @@ export function useLatency(): number | null {
   }, [db])
 
   return latency
+    const db = useDatabase()
+    const myid = useUniqueClientId()
+    const WebRtcBroadcastChannelRef = React.useRef(null)
+    React.useEffect(() => {
+	WebRtcBroadcastChannelRef.current = WebRTCBroadcastChannel(db, myid)
+    }, [])
+    return WebRtcBroadcastChannelRef.current
 }
 
 /**
  * A React hook that returns a map of the current presence of all clients in the current room.
  * The client also passes its own value, which will be included in the map for other clients.
  *
+export function useWebRtcBroadcastChannel() {
  * @param key The key that uniquely identifies the presence variable within the current room.
  * @param value The value that will be included in the map for other clients.
  * @returns A map of the current presence of all clients in the current room.
