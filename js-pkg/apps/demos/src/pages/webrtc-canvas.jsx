@@ -1,22 +1,23 @@
 import { DRIFTDB_URL } from '../config'
 import React, { useState, useCallback, useEffect } from 'react'
 import {
-  useSharedReducer,
   StatusIndicator,
   useUniqueClientId,
   usePresence,
-    useWebRtcBroadcastChannel,
+  useWebRtcPresence,
   DriftDBProvider
 } from 'driftdb-react'
 
 const HUE_OFFSET = (Math.random() * 360) | 0
 const USER_COLOR = randomColor()
+const RTC_COLOR = randomColor()
 
 function SharedCanvas() {
   const username = useUniqueClientId()
   const userColor = USER_COLOR
   const [mousePosition, setMousePosition] = useState(null)
-
+  const rtcMap = useWebRtcPresence({ name: username, mousePosition, RTC_COLOR })
+  console.log(rtcMap)
   const presence = usePresence('users', { name: username, mousePosition, userColor })
 
   const [ctx, setCtx] = useState(null)
@@ -28,10 +29,11 @@ function SharedCanvas() {
     setCtx(canvas.getContext('2d'))
   }, [])
 
-
-    useEffect(() => {
-	if (ctx) drawCanvas(ctx, presence)
-    })
+  useEffect(() => {
+    if (ctx) {
+      drawCanvas(ctx, presence, rtcMap)
+    }
+  })
 
   const onMouseLeave = () => {
     setMousePosition(null)
@@ -66,39 +68,38 @@ function randomColor() {
   const h = (Math.random() * 40 + HUE_OFFSET) % 360 | 0
   const s = (Math.random() * 30 + 25) | 0
   const l = (Math.random() * 30 + 50) | 0
-  return `hsl(${h}, ${s}%, ${l}%)`
+  return `hsla(${h}, ${s}%, ${l}%, 0.7)`
 }
 
-function drawCanvas(
-    ctx,
-    presence
-) {
+function drawCanvas(ctx, presence, webRtcPos) {
   if (!ctx) return
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-    console.log(presence)
 
-  // draw users' cursors as dots
-  Object.values(presence).map((user) => {
+  const userArr = [...webRtcPos.values(), ...Object.values(presence)]
+  userArr.map((user) => {
+    console.log(user)
     const { mousePosition, userColor, name } = user.value
-    if (mousePosition) {
-      ctx.beginPath()
-      ctx.fillStyle = userColor
-      ctx.moveTo(mousePosition[0], mousePosition[1])
-      ctx.arc(mousePosition[0], mousePosition[1], 5, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.font = '12px monospace'
-      ctx.fillText(name, mousePosition[0] + 8, mousePosition[1] - 8)
-      ctx.fillText("SLDKFJS", mousePosition[0] + 8, mousePosition[1] - 8)
-      ctx.strokeStyle = '#eee'
-      ctx.lineWidth = 1
-      ctx.strokeText(name, mousePosition[0] + 8, mousePosition[1] - 8)
-    }
+    drawCursor(ctx, userColor, name, mousePosition ?? [0, 0])
   })
+}
+
+function drawCursor(ctx, userColor, name, mousePosition) {
+  ctx.beginPath()
+  ctx.fillStyle = userColor
+  ctx.moveTo(mousePosition[0], mousePosition[1])
+  ctx.arc(mousePosition[0], mousePosition[1], 5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.font = '12px monospace'
+  ctx.fillText(name, mousePosition[0] + 8, mousePosition[1] - 8)
+  ctx.fillText('SLDKFJS', mousePosition[0] + 8, mousePosition[1] - 8)
+  ctx.strokeStyle = '#eee'
+  ctx.lineWidth = 1
+  ctx.strokeText(name, mousePosition[0] + 8, mousePosition[1] - 8)
 }
 
 export default function App() {
   return (
-    <DriftDBProvider api={DRIFTDB_URL} useBinary={true}>
+    <DriftDBProvider api={DRIFTDB_URL}>
       <SharedCanvas />
     </DriftDBProvider>
   )

@@ -69,7 +69,7 @@ function CrdtDemo() {
     (ref: HTMLTextAreaElement | null) => {
       if (ref == null) {
         if (editorRef.current != null) {
-          ; (editorRef.current as any).toTextArea()
+          ;(editorRef.current as any).toTextArea()
           editorRef.current = null
         }
         return

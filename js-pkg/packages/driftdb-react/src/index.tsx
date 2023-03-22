@@ -1,8 +1,18 @@
-import { Api, ConnectionStatus, DbConnection, PresenceListener, Reducer, RoomResult, StateListener, uniqueClientId, WrappedPresenceMessage } from "driftdb";
-import React, { useCallback, useEffect, useRef, SetStateAction, useState } from "react";
-import { WebRTCBroadcastChannel } from './webrtc2'
+import {
+  Api,
+  ConnectionStatus,
+  DbConnection,
+  PresenceListener,
+  Reducer,
+  RoomResult,
+  StateListener,
+  uniqueClientId,
+  WrappedPresenceMessage,
+  syncedWebRTCConnections
+} from 'driftdb'
+import React, { useCallback, useEffect, useRef, SetStateAction, useState } from 'react'
 
-const ROOM_ID_KEY = "_driftdb_room"
+const ROOM_ID_KEY = '_driftdb_room'
 
 function getRoomId(): string | null {
   const url = new URL(document.location.href)
@@ -304,20 +314,42 @@ export function useLatency(): number | null {
   }, [db])
 
   return latency
-    const db = useDatabase()
-    const myid = useUniqueClientId()
-    const WebRtcBroadcastChannelRef = React.useRef(null)
-    React.useEffect(() => {
-	WebRtcBroadcastChannelRef.current = WebRTCBroadcastChannel(db, myid)
-    }, [])
-    return WebRtcBroadcastChannelRef.current
+}
+
+function useWebRtcBroadcastChannel() {
+  const db = useDatabase()
+  const id = useUniqueClientId()
+  const WebRtcBroadcastChannelRef = React.useRef<any>(null)
+  React.useEffect(() => {
+    WebRtcBroadcastChannelRef.current = new syncedWebRTCConnections(db, id) as any
+  }, [])
+  return [
+    (msg: any) => WebRtcBroadcastChannelRef.current!.send(msg),
+    (onMessage: any) => {
+      console.log('eh?')
+      WebRtcBroadcastChannelRef.current!.onMessage = onMessage
+    }
+  ]
+}
+
+export function useWebRtcPresence(vals: any) {
+  const [send, setOnMessage] = useWebRtcBroadcastChannel()
+  const [rtcMap, setRtcMap] = useState(new Map())
+  React.useEffect(() => {
+    send(JSON.stringify(vals))
+  }, [vals])
+  React.useEffect(() => {
+    setOnMessage((msg: any) => {
+      setRtcMap(new Map(rtcMap).set(msg.sender, msg))
+    })
+  }, [rtcMap])
+  return rtcMap
 }
 
 /**
  * A React hook that returns a map of the current presence of all clients in the current room.
  * The client also passes its own value, which will be included in the map for other clients.
  *
-export function useWebRtcBroadcastChannel() {
  * @param key The key that uniquely identifies the presence variable within the current room.
  * @param value The value that will be included in the map for other clients.
  * @returns A map of the current presence of all clients in the current room.

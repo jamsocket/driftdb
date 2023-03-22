@@ -1,4 +1,4 @@
-import { PresenceListener } from 'driftdb'
+import { PresenceListener } from './presence'
 const dataChannelCreator =
   (p1, p2, onMessage, debounce = 10) =>
   (conn) => {
@@ -157,7 +157,6 @@ function createDriftDbSignalingChannel(
     console.log(msg)
   }
 ) {
-  console.log(p1 + p2)
   let signalingChannel = {
     onMessage,
     sendSignalingMessage: (msg) => {
