@@ -8,7 +8,7 @@ import {
   StateListener,
   uniqueClientId,
   WrappedPresenceMessage,
-  syncedWebRTCConnections
+  SyncedWebRTCConnections
 } from 'driftdb'
 import React, { useCallback, useEffect, useRef, SetStateAction, useState } from 'react'
 
@@ -321,13 +321,13 @@ function useWebRtcBroadcastChannel() {
   const id = useUniqueClientId()
   const WebRtcBroadcastChannelRef = React.useRef<any>(null)
   React.useEffect(() => {
-    WebRtcBroadcastChannelRef.current = new syncedWebRTCConnections(db, id) as any
+    WebRtcBroadcastChannelRef.current = new SyncedWebRTCConnections(db, id)
   }, [])
   return [
     (msg: any) => WebRtcBroadcastChannelRef.current!.send(msg),
     (onMessage: any) => {
       console.log('eh?')
-      WebRtcBroadcastChannelRef.current!.onMessage = onMessage
+      WebRtcBroadcastChannelRef.current!.setOnMessage(onMessage)
     }
   ]
 }

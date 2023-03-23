@@ -1,11 +1,10 @@
 {
     "extends": "../tsconfig/base.json",
     "compilerOptions": {
-	"target": "es2022",
+        "target": "es2015",
         "lib": ["esnext", "dom"],
         "composite": true,
         "outDir": "dist",
-	"allowJs": true,
         "rootDir": "src",
     },
     "include": [
