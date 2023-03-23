@@ -17,8 +17,8 @@ function SharedCanvas() {
   const userColor = USER_COLOR
   const [mousePosition, setMousePosition] = useState(null)
   const rtcMap = useWebRtcPresence({ name: username, mousePosition, RTC_COLOR })
-  console.log(rtcMap)
   const presence = usePresence('users', { name: username, mousePosition, userColor })
+  const drawing = React.useRef(false)
 
   const [ctx, setCtx] = useState(null)
   const setContext = useCallback((canvas) => {
@@ -31,7 +31,13 @@ function SharedCanvas() {
 
   useEffect(() => {
     if (ctx) {
-      drawCanvas(ctx, presence, rtcMap)
+      if (!drawing.current) {
+        drawing.current = true
+        requestAnimationFrame(() => {
+          drawCanvas(ctx, presence, rtcMap)
+          drawing.current = false
+        })
+      }
     }
   })
 
@@ -76,8 +82,8 @@ function drawCanvas(ctx, presence, webRtcPos) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
   const userArr = [...webRtcPos.values(), ...Object.values(presence)]
+
   userArr.map((user) => {
-    console.log(user)
     const { mousePosition, userColor, name } = user.value
     drawCursor(ctx, userColor, name, mousePosition ?? [0, 0])
   })
