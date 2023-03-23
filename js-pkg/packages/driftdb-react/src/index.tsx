@@ -316,33 +316,32 @@ export function useLatency(): number | null {
   return latency
 }
 
+type DataChannelMsg = { sender: string; value: any }
+type WebRtcOnMessage = (msg: DataChannelMsg) => void
+
 function useWebRtcBroadcastChannel() {
   const db = useDatabase()
   const id = useUniqueClientId()
-  const WebRtcBroadcastChannelRef = React.useRef<any>(null)
+  const WebRtcBroadcastChannelRef = React.useRef<SyncedWebRTCConnections>()
   React.useEffect(() => {
     WebRtcBroadcastChannelRef.current = new SyncedWebRTCConnections(db, id)
   }, [])
-  return [
-    (msg: any) => WebRtcBroadcastChannelRef.current!.send(msg),
-    (onMessage: any) => {
-      console.log('eh?')
-      WebRtcBroadcastChannelRef.current!.setOnMessage(onMessage)
+  return {
+    send: (msg: string) => WebRtcBroadcastChannelRef.current!.send(msg),
+    setOnMessage: (onMessage: WebRtcOnMessage) => WebRtcBroadcastChannelRef.current!.setOnMessage(onMessage) ,
+    peers: WebRtcBroadcastChannelRef.current!.peers()
     }
-  ]
 }
 
 export function useWebRtcPresence(vals: any) {
-  const [send, setOnMessage] = useWebRtcBroadcastChannel()
+  const {send, setOnMessage, peers} = useWebRtcBroadcastChannel()
   const [rtcMap, setRtcMap] = useState(new Map())
   React.useEffect(() => {
     send(JSON.stringify(vals))
   }, [vals])
   React.useEffect(() => {
-    setOnMessage((msg: any) => {
-      setRtcMap(new Map(rtcMap).set(msg.sender, msg))
-    })
-  }, [rtcMap])
+    setOnMessage((msg) => setRtcMap(new Map([...peers].map((peer) => [peer, rtcMap.get(peer) ?? msg.value]))))
+  }, [rtcMap, peers])
   return rtcMap
 }
 
