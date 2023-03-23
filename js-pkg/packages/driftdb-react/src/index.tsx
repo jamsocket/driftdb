@@ -341,7 +341,7 @@ export function useWebRtcPresence(vals: any) {
   }, [vals])
   React.useEffect(() => {
     setOnMessage((msg) => setRtcMap(new Map([...peers()].map((peer) => [peer, rtcMap.get(peer) ?? msg.value]))))
-  }, [rtcMap, peers])
+  }, [rtcMap])
   return rtcMap
 }
 
