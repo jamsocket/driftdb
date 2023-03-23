@@ -329,7 +329,7 @@ function useWebRtcBroadcastChannel() {
   return {
     send: (msg: string) => WebRtcBroadcastChannelRef.current!.send(msg),
     setOnMessage: (onMessage: WebRtcOnMessage) => WebRtcBroadcastChannelRef.current!.setOnMessage(onMessage) ,
-    peers: WebRtcBroadcastChannelRef.current!.peers()
+    peers: () => WebRtcBroadcastChannelRef.current!.peers()
     }
 }
 
@@ -340,7 +340,7 @@ export function useWebRtcPresence(vals: any) {
     send(JSON.stringify(vals))
   }, [vals])
   React.useEffect(() => {
-    setOnMessage((msg) => setRtcMap(new Map([...peers].map((peer) => [peer, rtcMap.get(peer) ?? msg.value]))))
+    setOnMessage((msg) => setRtcMap(new Map([...peers()].map((peer) => [peer, rtcMap.get(peer) ?? msg.value]))))
   }, [rtcMap, peers])
   return rtcMap
 }
