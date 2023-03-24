@@ -11,7 +11,7 @@ import {
 const HUE_OFFSET = (Math.random() * 360) | 0
 const USER_COLOR = randomColor()
 
-function SharedCanvas() {
+function WebRTCCursors() {
   const username = useUniqueClientId()
   const userColor = USER_COLOR
   const [mousePosition, setMousePosition] = useState(null)
@@ -100,7 +100,7 @@ function drawCursor(ctx, userColor, name, mousePosition) {
 export default function App() {
   return (
     <DriftDBProvider api={DRIFTDB_URL}>
-      <SharedCanvas />
+      <WebRTCCursors />
     </DriftDBProvider>
   )
 }
