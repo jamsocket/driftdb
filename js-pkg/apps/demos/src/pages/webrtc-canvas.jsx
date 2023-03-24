@@ -10,13 +10,12 @@ import {
 
 const HUE_OFFSET = (Math.random() * 360) | 0
 const USER_COLOR = randomColor()
-const RTC_COLOR = randomColor()
 
 function SharedCanvas() {
   const username = useUniqueClientId()
   const userColor = USER_COLOR
   const [mousePosition, setMousePosition] = useState(null)
-  const rtcMap = useWebRtcPresence({ name: username, mousePosition, RTC_COLOR }, 10)
+  const rtcPresence = useWebRtcPresence({ name: username, mousePosition, userColor }, 10)
   const presence = usePresence('users', { name: username, mousePosition, userColor })
   const drawing = React.useRef(false)
 
@@ -33,7 +32,7 @@ function SharedCanvas() {
     if (ctx && !drawing.current) {
       drawing.current = true
       requestAnimationFrame(() => {
-        drawCanvas(ctx, presence, rtcMap)
+        drawCanvas(ctx, presence, rtcPresence)
         drawing.current = false
       })
     }
@@ -53,7 +52,7 @@ function SharedCanvas() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">DriftDB - Shared Canvas Demo</h1>
+        <h1 className="text-2xl font-bold text-gray-800">DriftDB - WebRTC Cursors Demo</h1>
         <StatusIndicator />
       </div>
       <div className="mt-8">
