@@ -34,9 +34,9 @@ const demos = [
     description: 'Simple chat with WebRTC datachannels, using DriftDB for signaling.'
   },
   {
-    title: 'WebRTC presence',
-    href: '/webrtc-canvas',
-    description: 'cursors with ghosts!'
+    title: 'WebRTC Cursors',
+    href: '/webrtc-cursors',
+    description: 'Multiple cursors on a canvas implemented using both WebRTC and edge hosted WebSockets.'
   }
 ]
 
