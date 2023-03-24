@@ -79,11 +79,9 @@ function drawCanvas(ctx, presence, webRtcPos) {
   if (!ctx) return
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
-  const userArr = [...webRtcPos.values(), ...Object.values(presence)]
-
-  userArr.map((user) => {
-    const { mousePosition, userColor, name } = user.value
-    drawCursor(ctx, userColor, name, mousePosition ?? [0, 0])
+  const userArr = [...Object.values(webRtcPos), ...Object.values(presence)]
+  userArr.map(({ value: { mousePosition, userColor, name } }) => {
+    if (mousePosition) drawCursor(ctx, userColor, name, mousePosition)
   })
 }
 
@@ -95,7 +93,6 @@ function drawCursor(ctx, userColor, name, mousePosition) {
   ctx.fill()
   ctx.font = '12px monospace'
   ctx.fillText(name, mousePosition[0] + 8, mousePosition[1] - 8)
-  ctx.fillText('SLDKFJS', mousePosition[0] + 8, mousePosition[1] - 8)
   ctx.strokeStyle = '#eee'
   ctx.lineWidth = 1
   ctx.strokeText(name, mousePosition[0] + 8, mousePosition[1] - 8)
