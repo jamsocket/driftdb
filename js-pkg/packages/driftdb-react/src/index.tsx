@@ -345,13 +345,14 @@ export function useWebRtcPresence(vals: any, throttle = 0) {
   React.useEffect(() => {
     send(JSON.stringify(vals))
   }, [vals])
-    React.useEffect(() => {
+  React.useEffect(() => {
     let count = 0
     setOnMessage((msg) => {
       rtcMap.current!.set(msg.sender, msg)
       setMessageCount(count++)
     })
   }, [])
+
   return rtcMap.current
 }
 
