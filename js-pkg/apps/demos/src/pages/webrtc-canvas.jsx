@@ -1,5 +1,5 @@
 import { DRIFTDB_URL } from '../config'
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   StatusIndicator,
   useUniqueClientId,
