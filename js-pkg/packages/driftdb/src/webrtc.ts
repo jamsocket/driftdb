@@ -1,14 +1,13 @@
 import { DbConnection } from '.'
 import { PresenceListener } from './presence'
 
-type DataChannelMsg = { sender: string; value: any }
+type DataChannelMsg = { sender: string; value: any; lastSeen: number }
 type OnMessage = (msg: DataChannelMsg) => void
 type ChannelSendReceive = { send: (msg: string) => void; onMessage: OnMessage }
 type ChannelCreator = (conn: RTCPeerConnection) => ChannelSendReceive
 
 const getDataChannelCreator =
-  (p1: string, p2: string, onMessage: OnMessage, throttleMs = 0) =>
-  (conn: RTCPeerConnection) => {
+  (p1: string, p2: string, onMessage: OnMessage) => (conn: RTCPeerConnection) => {
     const dataChannel = conn.createDataChannel(p1)
     const sendRec = {
       send: (msg: string) => {
@@ -18,9 +17,8 @@ const getDataChannelCreator =
     }
 
     const dataChannelOnMessage = (e: MessageEvent<any>) =>
-      sendRec.onMessage({ sender: p2, value: JSON.parse(e.data) })
-    dataChannel.onmessage =
-      throttleMs === 0 ? dataChannelOnMessage : throttle(dataChannelOnMessage, throttleMs)
+      sendRec.onMessage({ sender: p2, value: JSON.parse(e.data), lastSeen: e.timeStamp })
+    dataChannel.onmessage = dataChannelOnMessage
 
     conn.ondatachannel = (e) => {
       if (e.channel.label === p2) {
@@ -45,21 +43,21 @@ export class WebRTCConnections {
     console.log('unhandled', msg)
   }
 
-  constructor(private db: DbConnection, public myId: string, private throttle = 0) {}
+  constructor(private db: DbConnection, public myId: string, private throttleMs = 0) {}
 
   addNewConnection(p2: string) {
     const signalingChannel = new SignalingChannel(this.db, this.myId, p2)
     const conn = signalingChannel.createWebRTCConnection([
-      getDataChannelCreator(this.myId, p2, (msg) => this.onMessage(msg), this.throttle)
+      getDataChannelCreator(this.myId, p2, (msg) => this.onMessage(msg))
     ])[0]
     this.connMap.set(p2, conn)
   }
 
-  send(msg: string) {
+  send = throttle((msg: string) => {
     this.connMap.forEach((peer) => {
       peer.send(msg)
     })
-  }
+  }, this.throttleMs)
 
   setOnMessage(func: OnMessage) {
     this.onMessage = func
