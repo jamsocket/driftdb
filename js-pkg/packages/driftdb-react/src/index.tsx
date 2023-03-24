@@ -316,7 +316,7 @@ export function useLatency(): number | null {
   return latency
 }
 
-type DataChannelMsg = { sender: string; value: any }
+type DataChannelMsg = { sender: string; value: any; lastSeen: number }
 type WebRtcOnMessage = (msg: DataChannelMsg) => void
 
 function useWebRtcBroadcastChannel(throttle = 0) {
@@ -334,20 +334,31 @@ function useWebRtcBroadcastChannel(throttle = 0) {
   }
 }
 
-export function useWebRtcPresence(vals: any, throttle = 0) {
+/**
+ * A React hook that returns a map of the current presence of all clients in the current room.
+ * The client also passes its own value, which wil be included in the map for other clients
+ *  @param value The value that will be included in the map for other clients.
+ *  @param throttle The minimum interval between messages being sent.
+ *         NOTE: any messages sent in the interval will be dropped.
+ *  @returns A map of the current presence of all clients in the current room.
+ */
+export function useWebRtcPresence<T>(
+  value: T,
+  throttle = 0
+): Record<string, WrappedPresenceMessage<T>> {
   const { send, setOnMessage, peers } = useWebRtcBroadcastChannel(throttle)
-  const rtcMap = useRef<Record<string, DataChannelMsg>>({})
+  const rtcMap = useRef<Record<string, WrappedPresenceMessage<T>>>({})
   for (const peer of Object.keys(rtcMap.current!)) {
     if (!peers.includes(peer)) delete rtcMap.current[peer]
   }
   const [_, setMessageCount] = useState(0)
   React.useEffect(() => {
-    send(JSON.stringify(vals))
-  }, [vals])
+    send(JSON.stringify(value))
+  }, [value])
   React.useEffect(() => {
     let count = 0
     setOnMessage((msg) => {
-      rtcMap.current[msg.sender] = msg
+      rtcMap.current[msg.sender] = { value: msg.value, lastSeen: msg.lastSeen }
       setMessageCount(count++)
     })
   }, [])
