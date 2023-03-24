@@ -16,7 +16,7 @@ function SharedCanvas() {
   const username = useUniqueClientId()
   const userColor = USER_COLOR
   const [mousePosition, setMousePosition] = useState(null)
-  const rtcMap = useWebRtcPresence({ name: username, mousePosition, RTC_COLOR })
+  const rtcMap = useWebRtcPresence({ name: username, mousePosition, RTC_COLOR }, 10)
   const presence = usePresence('users', { name: username, mousePosition, userColor })
   const drawing = React.useRef(false)
 
@@ -29,15 +29,13 @@ function SharedCanvas() {
     setCtx(canvas.getContext('2d'))
   }, [])
 
-  useEffect(() => {
-    if (ctx) {
-      if (!drawing.current) {
-        drawing.current = true
-        requestAnimationFrame(() => {
-          drawCanvas(ctx, presence, rtcMap)
-          drawing.current = false
-        })
-      }
+  React.useEffect(() => {
+    if (ctx && !drawing.current) {
+      drawing.current = true
+      requestAnimationFrame(() => {
+        drawCanvas(ctx, presence, rtcMap)
+        drawing.current = false
+      })
     }
   })
 

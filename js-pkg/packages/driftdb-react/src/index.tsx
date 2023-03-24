@@ -319,35 +319,42 @@ export function useLatency(): number | null {
 type DataChannelMsg = { sender: string; value: any }
 type WebRtcOnMessage = (msg: DataChannelMsg) => void
 
-function useWebRtcBroadcastChannel() {
+function useWebRtcBroadcastChannel(throttle = 0) {
   const db = useDatabase()
   const id = useUniqueClientId()
   const WebRtcBroadcastChannelRef = React.useRef<SyncedWebRTCConnections>()
-  React.useEffect(() => {
-    WebRtcBroadcastChannelRef.current = new SyncedWebRTCConnections(db, id)
-  }, [])
+  if (!WebRtcBroadcastChannelRef.current) {
+    WebRtcBroadcastChannelRef.current = new SyncedWebRTCConnections(db, id, throttle)
+  }
   return {
     send: (msg: string) => WebRtcBroadcastChannelRef.current!.send(msg),
     setOnMessage: (onMessage: WebRtcOnMessage) =>
       WebRtcBroadcastChannelRef.current!.setOnMessage(onMessage),
-    peers: () => WebRtcBroadcastChannelRef.current!.peers()
+    peers: WebRtcBroadcastChannelRef.current!.peers()
   }
 }
 
-export function useWebRtcPresence(vals: any) {
-  const { send, setOnMessage, peers } = useWebRtcBroadcastChannel()
-  const [rtcMap, setRtcMap] = useState(new Map())
+export function useWebRtcPresence(vals: any, throttle = 0) {
+  const { send, setOnMessage, peers } = useWebRtcBroadcastChannel(throttle)
+  const rtcMap = useRef<Map<string, DataChannelMsg>>()
+  if (!rtcMap.current) rtcMap.current = new Map()
+  const [messageCount, setMessageCount] = useState(0)
   React.useEffect(() => {
     send(JSON.stringify(vals))
   }, [vals])
   React.useEffect(() => {
+    for (const peer of rtcMap.current!.keys()) {
+      if (![...peers].includes(peer)) rtcMap.current!.delete(peer)
+    }
+  }, [peers])
+  React.useEffect(() => {
+    let count = 0
     setOnMessage((msg) => {
-      let newMap = new Map([...peers()].map((peer) => [peer, rtcMap.get(peer)]))
-      newMap.set(msg.sender, msg)
-      setRtcMap(newMap)
+      rtcMap.current!.set(msg.sender, msg)
+      setMessageCount(count++)
     })
-  }, [rtcMap])
-  return rtcMap
+  }, [messageCount])
+  return rtcMap.current
 }
 
 /**

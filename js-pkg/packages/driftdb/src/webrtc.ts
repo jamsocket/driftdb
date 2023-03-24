@@ -45,12 +45,12 @@ export class WebRTCConnections {
     console.log('unhandled', msg)
   }
 
-  constructor(private db: DbConnection, public myId: string) {}
+  constructor(private db: DbConnection, public myId: string, private throttle = 0) {}
 
   addNewConnection(p2: string) {
     const signalingChannel = new SignalingChannel(this.db, this.myId, p2)
     const conn = signalingChannel.createWebRTCConnection([
-      getDataChannelCreator(this.myId, p2, (msg) => this.onMessage(msg))
+      getDataChannelCreator(this.myId, p2, (msg) => this.onMessage(msg), this.throttle)
     ])[0]
     this.connMap.set(p2, conn)
   }
@@ -73,21 +73,22 @@ export class WebRTCConnections {
   }
 
   peers() {
-    return new Set(this.connMap.keys())
+    return this.connMap.keys()
   }
 }
 
 export class SyncedWebRTCConnections extends WebRTCConnections {
   presence: PresenceListener<string>
-  constructor(db: DbConnection, id: string) {
-    super(db, id)
+  constructor(db: DbConnection, id: string, throttle = 0) {
+    super(db, id, throttle)
     this.presence = new PresenceListener<string>({
       initialState: '',
       db,
       clientId: id,
       callback: (msg) => {
         this.sync(Object.values(msg).map(({ value }) => value))
-      }
+      },
+      minPresenceInterval: throttle
     })
     this.refreshConnections()
     this.presence.subscribe()
@@ -100,12 +101,13 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   }
 
   sync(newPeers: string[]) {
+    const curPeersSet = new Set(this.peers())
     const newPeersSet = new Set(newPeers)
-    for (const elem of difference(this.peers(), newPeersSet)) {
+    for (const elem of difference(curPeersSet, newPeersSet)) {
       this.removeConnection(elem)
     }
 
-    for (const elem of difference(newPeersSet, this.peers())) {
+    for (const elem of difference(newPeersSet, curPeersSet)) {
       this.addNewConnection(elem)
     }
   }
@@ -239,7 +241,7 @@ type AnyFunc = (...args: any[]) => void
 function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
   let block = false
   return (...args) => {
-    if (block) {
+    if (!block) {
       fn(...args)
       block = true
       setTimeout(() => {
