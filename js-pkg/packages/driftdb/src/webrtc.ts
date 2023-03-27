@@ -29,16 +29,17 @@ const getDataChannelCreator =
     return sendRec
   }
 
-function difference(setA: Set<any>, setB: Set<any>) {
-  const _difference = new Set(setA)
-  for (const elem of setB) {
-    _difference.delete(elem)
+interface Syncable<T> extends Iterable<T> {
+  has(arg0: T): boolean
+}
+function* difference<T>(setA: Iterable<T>, setB: Syncable<T>) {
+  for (const elem of setA) {
+    if (!setB.has(elem)) yield elem
   }
-  return _difference
 }
 
 export class WebRTCConnections {
-  private connMap = new Map<string, ChannelSendReceive>()
+  public connMap = new Map<string, ChannelSendReceive>()
   private onMessage = (msg: DataChannelMsg) => {
     console.log('unhandled', msg)
   }
@@ -71,7 +72,19 @@ export class WebRTCConnections {
   }
 
   peers() {
-    return this.connMap.keys()
+    return {
+      [Symbol.iterator]: this.connMap.keys.bind(this.connMap),
+      has: this.connMap.has.bind(this.connMap)
+    }
+  }
+}
+
+function sync<T>(a: Syncable<T>, b: Syncable<T>, cb1: (arg: T) => void, cb2: (arg: T) => void) {
+  for (const elem of difference(a, b)) {
+    cb1(elem)
+  }
+  for (const elem of difference(b, a)) {
+    cb2(elem)
   }
 }
 
@@ -84,7 +97,8 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
       db,
       clientId: id,
       callback: (msg) => {
-        this.sync(Object.values(msg).map(({ value }) => value))
+        let peers = Object.values(msg).map(({ value }) => value)
+        this.sync({ [Symbol.iterator]: peers[Symbol.iterator], has: peers.includes.bind(peers) })
       },
       minPresenceInterval: throttle
     })
@@ -98,16 +112,8 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
     this.presence.updateState(newId)
   }
 
-  sync(newPeers: string[]) {
-    const curPeersSet = new Set(this.peers())
-    const newPeersSet = new Set(newPeers)
-    for (const elem of difference(curPeersSet, newPeersSet)) {
-      this.removeConnection(elem)
-    }
-
-    for (const elem of difference(newPeersSet, curPeersSet)) {
-      this.addNewConnection(elem)
-    }
+  sync(newPeers: Syncable<string>) {
+    sync(this.peers(), newPeers, this.removeConnection.bind(this), this.addNewConnection.bind(this))
   }
 }
 
