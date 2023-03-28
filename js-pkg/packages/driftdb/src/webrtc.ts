@@ -1,5 +1,5 @@
 import { DbConnection } from '.'
-import { PresenceListener } from './presence'
+import { PresenceListener, WrappedPresenceMessage } from './presence'
 
 type DataChannelMsg = { sender: string; value: any; lastSeen: number }
 type OnMessage = (msg: DataChannelMsg) => void
@@ -9,15 +9,17 @@ type ChannelCreator = (conn: RTCPeerConnection) => ChannelSendReceive
 const getDataChannelCreator =
   (p1: string, p2: string, onMessage: OnMessage) => (conn: RTCPeerConnection) => {
     const dataChannel = conn.createDataChannel(p1)
-    const sendRec = {
+    const sendRec: ChannelSendReceive = {
       send: (msg: string) => {
         console.log(msg)
       },
       onMessage
     }
 
-    const dataChannelOnMessage = (e: MessageEvent<any>) =>
-      sendRec.onMessage({ sender: p2, value: JSON.parse(e.data), lastSeen: e.timeStamp })
+    const dataChannelOnMessage = (e: MessageEvent<any>) => {
+      const msg = { sender: p2, value: JSON.parse(e.data), lastSeen: e.timeStamp }
+      sendRec.onMessage(msg)
+    }
     dataChannel.onmessage = dataChannelOnMessage
 
     conn.ondatachannel = (e) => {
@@ -35,6 +37,13 @@ interface Syncable<T> extends Iterable<T> {
 function* difference<T>(setA: Iterable<T>, setB: Syncable<T>) {
   for (const elem of setA) {
     if (!setB.has(elem)) yield elem
+  }
+}
+
+const mapToSyncable = <K>(a: Map<K, any>): Syncable<K> => {
+  return {
+    [Symbol.iterator]: a.keys.bind(a),
+    has: a.has.bind(a)
   }
 }
 
@@ -72,10 +81,7 @@ export class WebRTCConnections {
   }
 
   peers() {
-    return {
-      [Symbol.iterator]: this.connMap.keys.bind(this.connMap),
-      has: this.connMap.has.bind(this.connMap)
-    }
+    return mapToSyncable(this.connMap)
   }
 }
 
@@ -90,6 +96,7 @@ function sync<T>(a: Syncable<T>, b: Syncable<T>, cb1: (arg: T) => void, cb2: (ar
 
 export class SyncedWebRTCConnections extends WebRTCConnections {
   presence: PresenceListener<string>
+  #peersToLastMsg = new Map<string, WrappedPresenceMessage<any>>()
   constructor(db: DbConnection, id: string, throttle = 0) {
     super(db, id, throttle)
     this.presence = new PresenceListener<string>({
@@ -106,6 +113,13 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
     this.presence.subscribe()
   }
 
+  setOnMessage(func: OnMessage) {
+    super.setOnMessage((msg) => {
+      func(msg)
+      this.#peersToLastMsg.set(msg.sender, msg)
+    })
+  }
+
   refreshConnections() {
     let newId = (typeof crypto !== 'undefined' ? crypto.randomUUID() : 'PLACEHOLDER').slice(0, 5)
     this.myId = newId
@@ -113,9 +127,21 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   }
 
   sync(newPeers: Syncable<string>) {
+    sync(
+      mapToSyncable(this.#peersToLastMsg),
+      newPeers,
+      (peer) => this.#peersToLastMsg.delete(peer),
+      () => {}
+    )
     sync(this.peers(), newPeers, this.removeConnection.bind(this), this.addNewConnection.bind(this))
   }
+
+  peersToLastMsg() {
+    this
+  }
 }
+
+export class WebRTCPresenceListener extends WebRTCConnections {}
 
 class SignalingChannel {
   makingOffer = false
