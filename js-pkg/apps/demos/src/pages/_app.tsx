@@ -69,7 +69,7 @@ function Nav({ isDesktop, curRoute }: { isDesktop?: boolean; curRoute: string })
             WebRTC Chat
           </NavLink>
           <NavLink href="/webrtc-cursors" curRoute={curRoute}>
-            Webrtc Cursors
+            WebRTC Cursors
           </NavLink>
         </ul>
       </nav>
