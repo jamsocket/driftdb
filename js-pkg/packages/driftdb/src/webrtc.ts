@@ -96,7 +96,7 @@ function sync<T>(a: Syncable<T>, b: Syncable<T>, cb1: (arg: T) => void, cb2: (ar
 
 export class SyncedWebRTCConnections extends WebRTCConnections {
   presence: PresenceListener<string>
-  #peersToLastMsg : Record<string, WrappedPresenceMessage<any>> = {}
+  #peersToLastMsg: Record<string, WrappedPresenceMessage<any>> = {}
   constructor(db: DbConnection, id: string, throttle = 0) {
     super(db, id, throttle)
     this.presence = new PresenceListener<string>({
@@ -117,7 +117,7 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   setOnMessage(func: OnMessage) {
     super.setOnMessage((msg) => {
       func(msg)
-      this.#peersToLastMsg[msg.sender] =  msg
+      this.#peersToLastMsg[msg.sender] = msg
     })
   }
 
@@ -130,9 +130,12 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   sync(newPeers: Syncable<string>) {
     newPeers = new Set(newPeers) //since this is used twice it can't be an iterable
     sync(
-      { [Symbol.iterator]: () => Object.keys(this.#peersToLastMsg).values(), has: Reflect.has.bind({}, this.#peersToLastMsg) },
+      {
+        [Symbol.iterator]: () => Object.keys(this.#peersToLastMsg).values(),
+        has: Reflect.has.bind({}, this.#peersToLastMsg)
+      },
       newPeers,
-      (peer) => Reflect.deleteProperty(this.#peersToLastMsg, (peer)),
+      (peer) => Reflect.deleteProperty(this.#peersToLastMsg, peer),
       () => {}
     )
     sync(this.peers(), newPeers, this.removeConnection.bind(this), this.addNewConnection.bind(this))
