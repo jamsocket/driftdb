@@ -146,8 +146,6 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   }
 }
 
-export class WebRTCPresenceListener extends WebRTCConnections {}
-
 class SignalingChannel {
   makingOffer = false
   conn: RTCPeerConnection | null = null
