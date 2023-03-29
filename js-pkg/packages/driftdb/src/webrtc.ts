@@ -96,7 +96,7 @@ function sync<T>(a: Syncable<T>, b: Syncable<T>, cb1: (arg: T) => void, cb2: (ar
 
 export class SyncedWebRTCConnections extends WebRTCConnections {
   presence: PresenceListener<string>
-  #peersToLastMsg = new Map<string, WrappedPresenceMessage<any>>()
+  #peersToLastMsg : Record<string, WrappedPresenceMessage<any>> = {}
   constructor(db: DbConnection, id: string, throttle = 0) {
     super(db, id, throttle)
     this.presence = new PresenceListener<string>({
@@ -105,18 +105,19 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
       clientId: id,
       callback: (msg) => {
         let peers = Object.values(msg).map(({ value }) => value)
-        this.sync({ [Symbol.iterator]: peers[Symbol.iterator], has: peers.includes.bind(peers) })
+        this.sync({ [Symbol.iterator]: peers.values.bind(peers), has: peers.includes.bind(peers) })
       },
       minPresenceInterval: throttle
     })
     this.refreshConnections()
     this.presence.subscribe()
+    this.setOnMessage((msg) => { console.log("synced: ", msg) })
   }
 
   setOnMessage(func: OnMessage) {
     super.setOnMessage((msg) => {
       func(msg)
-      this.#peersToLastMsg.set(msg.sender, msg)
+      this.#peersToLastMsg[msg.sender] =  msg
     })
   }
 
@@ -127,10 +128,11 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   }
 
   sync(newPeers: Syncable<string>) {
+    newPeers = new Set(newPeers) //since this is used twice it can't be an iterable
     sync(
-      mapToSyncable(this.#peersToLastMsg),
+      { [Symbol.iterator]: () => Object.keys(this.#peersToLastMsg).values(), has: Reflect.has.bind({}, this.#peersToLastMsg) },
       newPeers,
-      (peer) => this.#peersToLastMsg.delete(peer),
+      (peer) => Reflect.deleteProperty(this.#peersToLastMsg, (peer)),
       () => {}
     )
     sync(this.peers(), newPeers, this.removeConnection.bind(this), this.addNewConnection.bind(this))

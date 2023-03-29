@@ -316,9 +316,6 @@ export function useLatency(): number | null {
   return latency
 }
 
-type DataChannelMsg = { sender: string; value: any; lastSeen: number }
-type WebRtcOnMessage = (msg: DataChannelMsg) => void
-
 function useWebRtcBroadcastChannel(throttle = 0) {
   const db = useDatabase()
   const id = useUniqueClientId()
@@ -348,7 +345,7 @@ export function useWebRtcPresence<T>(
   React.useEffect(() => {
     send(JSON.stringify(value))
   }, [value])
-  return Object.fromEntries(rtcMap)
+  return rtcMap
 }
 
 /**
