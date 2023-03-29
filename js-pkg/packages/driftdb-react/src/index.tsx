@@ -328,9 +328,7 @@ function useWebRtcBroadcastChannel(throttle = 0) {
   }
   return {
     send: (msg: string) => WebRtcBroadcastChannelRef.current!.send(msg),
-    setOnMessage: (onMessage: WebRtcOnMessage) =>
-      WebRtcBroadcastChannelRef.current!.setOnMessage(onMessage),
-    peers: [...WebRtcBroadcastChannelRef.current!.peers()]
+    rtcMap: WebRtcBroadcastChannelRef.current!.peersToLastMsg()
   }
 }
 
@@ -346,24 +344,11 @@ export function useWebRtcPresence<T>(
   value: T,
   throttle = 0
 ): Record<string, WrappedPresenceMessage<T>> {
-  const { send, setOnMessage, peers } = useWebRtcBroadcastChannel(throttle)
-  const rtcMap = useRef<Record<string, WrappedPresenceMessage<T>>>({})
-  for (const peer of Object.keys(rtcMap.current!)) {
-    if (!peers.includes(peer)) delete rtcMap.current[peer]
-  }
-  const [_, setMessageCount] = useState(0)
+  const { send, rtcMap } = useWebRtcBroadcastChannel(throttle)
   React.useEffect(() => {
     send(JSON.stringify(value))
   }, [value])
-  React.useEffect(() => {
-    let count = 0
-    setOnMessage((msg) => {
-      rtcMap.current[msg.sender] = { value: msg.value, lastSeen: msg.lastSeen }
-      setMessageCount(count++)
-    })
-  }, [])
-
-  return rtcMap.current
+  return Object.fromEntries(rtcMap)
 }
 
 /**

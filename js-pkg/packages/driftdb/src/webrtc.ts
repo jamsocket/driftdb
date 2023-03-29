@@ -137,7 +137,7 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   }
 
   peersToLastMsg() {
-    this
+    return this.#peersToLastMsg
   }
 }
 
