@@ -111,7 +111,7 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
     })
     this.refreshConnections()
     this.presence.subscribe()
-    this.setOnMessage((msg) => { console.log("synced: ", msg) })
+    this.setOnMessage((_msg) => {})
   }
 
   setOnMessage(func: OnMessage) {
