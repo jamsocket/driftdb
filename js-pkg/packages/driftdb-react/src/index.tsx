@@ -8,7 +8,8 @@ import {
   StateListener,
   uniqueClientId,
   WrappedPresenceMessage,
-  SyncedWebRTCConnections
+  SyncedWebRTCConnections,
+  DataChannelMsg
 } from 'driftdb'
 import React, { useCallback, useEffect, useRef, SetStateAction, useState } from 'react'
 
@@ -316,16 +317,36 @@ export function useLatency(): number | null {
   return latency
 }
 
-function useWebRtcBroadcastChannel(throttle = 0) {
+type AnyFunc = (...args: any[]) => void
+function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
+  let lastTime = 0
+  return (...args) => {
+    let curTime = Date.now()
+    if (curTime - lastTime > durationMs) {
+      fn(...args)
+      lastTime = curTime
+    }
+  }
+}
+
+
+function useWebRtcBroadcastChannel<T>(
+  throttleMs = 0,
+  setRtcMap: (map: Record<string, WrappedPresenceMessage<T>>) => void
+) {
   const db = useDatabase()
   const id = useUniqueClientId()
   const WebRtcBroadcastChannelRef = React.useRef<SyncedWebRTCConnections>()
+  const send = React.useCallback((msg: string) => WebRtcBroadcastChannelRef.current!.send(msg),[])
   if (!WebRtcBroadcastChannelRef.current) {
-    WebRtcBroadcastChannelRef.current = new SyncedWebRTCConnections(db, id, throttle)
+    let rtcconns = new SyncedWebRTCConnections(db, id, throttleMs)
+    rtcconns.setOnMessage(
+      (_msg) => throttle(() => setRtcMap({...rtcconns.getPeersToLastMsg()}), throttleMs)
+      )
+    WebRtcBroadcastChannelRef.current = rtcconns
   }
   return {
-    send: (msg: string) => WebRtcBroadcastChannelRef.current!.send(msg),
-    rtcMap: WebRtcBroadcastChannelRef.current!.peersToLastMsg()
+    send
   }
 }
 
@@ -341,7 +362,8 @@ export function useWebRtcPresence<T>(
   value: T,
   throttle = 0
 ): Record<string, WrappedPresenceMessage<T>> {
-  const { send, rtcMap } = useWebRtcBroadcastChannel(throttle)
+  const [rtcMap, setRtcMap] = useState<Record<string, WrappedPresenceMessage<T>>>({})
+  const { send } = useWebRtcBroadcastChannel(throttle, setRtcMap)
   React.useEffect(() => {
     send(JSON.stringify(value))
   }, [value])
