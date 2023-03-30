@@ -66,9 +66,9 @@ export class WebRTCConnections {
   send = throttle((msg: string) => {
     this.connMap.forEach((peer) => {
       try {
-	peer.send(msg)
-      } catch(e) {
-	console.warn("send message: ", msg, " failed!")
+        peer.send(msg)
+      } catch (e) {
+        console.warn('send message: ', msg, ' failed!')
       }
     })
   }, this.throttleMs)
