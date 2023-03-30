@@ -114,7 +114,7 @@ in the stream.
 To create a subscription:
 
 ```typescript
-conn.subscribe("my-key", (d) => console.log(`received on my-key: ${d}`))
+conn.subscribe("my-key", (d) => console.log('received on my-key', d))
 ```
 
 ## Sending
