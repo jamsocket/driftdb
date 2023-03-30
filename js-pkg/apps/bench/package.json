@@ -1,0 +1,25 @@
+{
+  "name": "driftdb-bench",
+  "scripts": {
+      "build": "esbuild src/index.ts --bundle --outfile=./dist/index.js",
+    "dev": "npm run build -- --watch"
+  },
+  "version": "1.0.12",
+  "description": "",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist/**/*"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^6.6.3"
+  },
+  "homepage": "https://driftdb.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/drifting-in-space/driftdb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/drifting-in-space/driftdb/issues"
+  }
+}

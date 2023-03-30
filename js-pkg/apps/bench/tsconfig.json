@@ -1,0 +1,19 @@
+{
+  "extends": "../../packages/tsconfig/base.json",
+    "compilerOptions": {
+	"lib": ["esnext", "dom"],
+    "module": "ESNext",
+    "target": "es6"
+    },
+  "include": [
+      "."
+  ],
+  "exclude": [
+      "dist",
+      "build",
+      "node_modules"
+  ],
+  "references": [
+      { "path": "../../packages/driftdb" }
+  ]
+}
