@@ -59,6 +59,10 @@ export class WebRTCConnections {
     this.connMap = new Map(entries.map(([peer, conn]) => [this.myId + peer, conn]))
   }
 
+  hasPeer(peer: string) {
+    return this.connMap.has(this.myId + peer)
+  }
+
   send = throttle((msg: string) => {
     this.connMap.forEach((peer) => {
       peer.send(msg)
@@ -100,11 +104,12 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
 
   createFailureHandler() {
     let numErrors = 0
+    let errThreshold = this.connMap.size * 2
     return (conn: RTCPeerConnection) => {
       numErrors++
-      if (numErrors == 3) {
+      if (numErrors == errThreshold) {
         this.refreshConnections()
-      } else if (numErrors > 3) {
+      } else if (numErrors > errThreshold) {
         conn.close()
       } else {
         conn.restartIce()
@@ -130,12 +135,9 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
     this.setConnMap(
       newPeers.map((peer) => [peer, this.getConn(peer) ?? this.addNewConnection(peer)])
     )
-    this.peersToLastMsg = Object.fromEntries(
-      Object.entries(this.peersToLastMsg).reduce(
-        (a, b) => (newPeers.includes(b[0]) ? [...a, b] : [...a]),
-        [] as [string, WrappedPresenceMessage<any>][]
-      )
-    )
+    Object.keys(this.peersToLastMsg).forEach((peer) => {
+      if (!this.hasPeer(peer)) delete this.peersToLastMsg[peer]
+    })
   }
 
   getPeersToLastMsg() {
