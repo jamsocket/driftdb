@@ -17,8 +17,8 @@ For more information, see [driftdb.com](https://driftdb.com).
 - `driftdb/`: core Rust driftdb implementation.
 - `driftdb-server/`: Rust crate of driftdb dev server.
 - `driftdb-worker/`: driftdb implementation on Cloudflare Workers.
-- `js-pkg/`: JavaScript package root.
-    - `demos/`: next.js project containing several demos, available on the web at [demos.driftdb.com](https://demos.driftdb.com).
-    - `driftdb/`: JavaScript client library for driftdb.
-    - `driftdb-react/`: Higher-level React hook-based interface to driftdb.
-    - `driftdb-ui/`: React-based debug UI for driftdb, available on the web at [ui.driftdb.com](https://ui.driftdb.com).
+- `js-pkg/`: JavaScript package root (turborepo monorepo).
+    - `apps/demos/`: next.js project containing several demos, available on the web at [demos.driftdb.com](https://demos.driftdb.com).
+    - `packages/driftdb/`: JavaScript client library for driftdb.
+    - `packages/driftdb-react/`: Higher-level React hook-based interface to driftdb.
+    - `packages/driftdb-ui/`: React-based debug UI for driftdb, available on the web at [ui.driftdb.com](https://ui.driftdb.com).
