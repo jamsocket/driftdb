@@ -31,55 +31,32 @@ const getDataChannelCreator =
     return sendRec
   }
 
-interface Syncable<T> extends Iterable<T> {
-  has(arg0: T): boolean
-  [index: string]: any
-}
-const SyncableProxyHandler: ProxyHandler<Syncable<string>> = { get(target, prop, receiver) {
-    const val = Reflect.get(target,prop)
-    if(prop === "has") {
-      if (target instanceof Array) { return target.includes.bind(target) }
-      if (Object.getPrototypeOf(target).constructor.name === "Object")
-	return (elem: any) => Object.hasOwn(target, elem)
-    }
-    if(prop === Symbol.iterator) {
-      if (target instanceof Map) {
-	return target.keys.bind(target)
-      }
-      if (Object.getPrototypeOf(target).constructor.name === "Object") {
-	return () => Object.keys(target).values()
-      }
-    }
-    return (val instanceof Function) ?
-      (...args: any[]) => Reflect.apply(val, target, args)
-    : Reflect.get(target, prop ,receiver) 
-  }
-}
-const makeSyncable = (a: any) => new Proxy<Syncable<string>>(
-  a as Syncable<string>, SyncableProxyHandler
-)
-
-function* difference<T>(setA: Iterable<T>, setB: Syncable<T>) {
-  for (const elem of setA) {
-    if (!setB.has(elem)) yield elem
-  }
-}
-
 export class WebRTCConnections {
   public connMap = new Map<string, ChannelSendReceive>()
-  private connMapSyncable = makeSyncable(this.connMap)
   private onMessage = (msg: DataChannelMsg) => {
     console.log('unhandled', msg)
+  }
+  private onFailure = (conn: RTCPeerConnection) => {
+    conn.restartIce()
   }
 
   constructor(private db: DbConnection, public myId: string, private throttleMs = 0) {}
 
   addNewConnection(p2: string) {
     const signalingChannel = new SignalingChannel(this.db, this.myId, p2)
-    const conn = signalingChannel.createWebRTCConnection([
-      getDataChannelCreator(this.myId, p2, (msg) => this.onMessage(msg))
-    ])[0]
-    this.connMap.set(p2, conn)
+    const conn = signalingChannel.createWebRTCConnection(
+      [getDataChannelCreator(this.myId, p2, (msg) => this.onMessage(msg))],
+      this.onFailure
+    )[0]
+    return conn
+  }
+
+  getConn(peer: string) {
+    return this.connMap.get(this.myId + peer)
+  }
+
+  setConnMap(entries: [string, ChannelSendReceive][]) {
+    this.connMap = new Map(entries.map(([peer, conn]) => [this.myId + peer, conn]))
   }
 
   send = throttle((msg: string) => {
@@ -95,29 +72,15 @@ export class WebRTCConnections {
     })
   }
 
-  removeConnection(peer: string) {
-    this.connMap.delete(peer)
-  }
-
-  peers() {
-    return this.connMapSyncable 
-  }
-
-}
-
-function sync<T>(a: Syncable<T>, b: Syncable<T>, cb1: (arg: T) => void, cb2: (arg: T) => void) {
-  for (const elem of difference(a, b)) {
-    cb1(elem)
-  }
-  for (const elem of difference(b, a)) {
-    cb2(elem)
+  setOnFailure(func: (conn: RTCPeerConnection) => void) {
+    this.onFailure = func
   }
 }
 
 export class SyncedWebRTCConnections extends WebRTCConnections {
   presence: PresenceListener<string>
   private peersToLastMsg: Record<string, WrappedPresenceMessage<any>> = {}
-  private syncablePeersToLastMsg= makeSyncable(this.peersToLastMsg) 
+
   constructor(db: DbConnection, id: string, throttle = 0) {
     super(db, id, throttle)
     this.presence = new PresenceListener<string>({
@@ -125,13 +88,28 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
       db,
       clientId: id,
       callback: (msg) => {
-	this.sync(makeSyncable(Object.values(msg).map(({ value }) => value)))
+        this.sync(Object.values(msg).map(({ value }) => value))
       },
       minPresenceInterval: throttle
     })
     this.refreshConnections()
     this.presence.subscribe()
     this.setOnMessage((_msg) => {})
+    this.setOnFailure(this.createFailureHandler())
+  }
+
+  createFailureHandler() {
+    let numErrors = 0
+    return (conn: RTCPeerConnection) => {
+      numErrors++
+      if (numErrors == 3) {
+        this.refreshConnections()
+      } else if (numErrors > 3) {
+        conn.close()
+      } else {
+        conn.restartIce()
+      }
+    }
   }
 
   setOnMessage(func: OnMessage) {
@@ -142,19 +120,22 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   }
 
   refreshConnections() {
-    let newId = (typeof crypto !== 'undefined' ? crypto.randomUUID() : 'PLACEHOLDER').slice(0, 5)
+    let newId = typeof crypto !== 'undefined' ? crypto.randomUUID().slice(0, 5) : 'PLACEHOLDER'
     this.myId = newId
     this.presence.updateState(newId)
+    this.setOnFailure(this.createFailureHandler())
   }
 
-  sync(newPeers: Syncable<string>) {
-    sync(
-      this.syncablePeersToLastMsg,
-      newPeers,
-      (peer) => Reflect.deleteProperty(this.peersToLastMsg, peer),
-      (_peer) => { }
+  sync(newPeers: string[]) {
+    this.setConnMap(
+      newPeers.map((peer) => [peer, this.getConn(peer) ?? this.addNewConnection(peer)])
     )
-    sync(this.peers(), newPeers, this.removeConnection.bind(this), this.addNewConnection.bind(this))
+    this.peersToLastMsg = Object.fromEntries(
+      Object.entries(this.peersToLastMsg).reduce(
+        (a, b) => (newPeers.includes(b[0]) ? [...a, b] : [...a]),
+        [] as [string, WrappedPresenceMessage<any>][]
+      )
+    )
   }
 
   getPeersToLastMsg() {
@@ -184,10 +165,17 @@ class SignalingChannel {
     })
   }
 
-  createWebRTCConnection(connSetupArray: ChannelCreator[]): ChannelSendReceive[] {
-    this.conn = createWebRTCConnection((makingOffer: boolean) => {
-      this.makingOffer = makingOffer
-    }, this.sendSignalingMessage.bind(this))
+  createWebRTCConnection(
+    connSetupArray: ChannelCreator[],
+    onFailure: (conn: RTCPeerConnection) => void
+  ): ChannelSendReceive[] {
+    this.conn = createWebRTCConnection(
+      (makingOffer: boolean) => {
+        this.makingOffer = makingOffer
+      },
+      this.sendSignalingMessage.bind(this),
+      onFailure
+    )
     const Connections = []
     for (let func of connSetupArray ?? []) {
       Connections.push(func(this.conn))
@@ -246,7 +234,8 @@ type SignalingMessage =
 
 function createWebRTCConnection(
   setMakingOffer: (makingOffer: boolean) => void,
-  sendSignalingMessage: (msg: SignalingMessage) => void
+  sendSignalingMessage: (msg: SignalingMessage) => void,
+  onFailure: (conn: RTCPeerConnection) => void
 ) {
   const conn = new RTCPeerConnection({
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -273,13 +262,17 @@ function createWebRTCConnection(
 
   conn.onconnectionstatechange = () => {
     console.log('current webrtc connection state: ', conn.connectionState)
+    if (conn.connectionState === 'failed') {
+      console.log('conn failed, applying onFailure callback')
+      onFailure(conn)
+    }
   }
 
   conn.oniceconnectionstatechange = (_e) => {
     console.log(conn.iceConnectionState)
     if (conn.iceConnectionState === 'failed') {
-      console.log('conn failed, restarting ICE')
-      conn.restartIce()
+      console.log('conn failed, applying onFailure callback')
+      onFailure(conn)
     }
   }
 
@@ -291,7 +284,9 @@ function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
   let lastTime = Date.now()
   return (...args) => {
     let curTime = Date.now()
-    if (lastTime - curTime > durationMs) fn(...args)
-    lastTime = curTime
+    if (curTime - lastTime > durationMs) {
+      fn(...args)
+      lastTime = curTime
+    }
   }
 }
