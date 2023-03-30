@@ -281,7 +281,7 @@ function createWebRTCConnection(
 
 type AnyFunc = (...args: any[]) => void
 function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
-  let lastTime = Date.now()
+  let lastTime = 0
   return (...args) => {
     let curTime = Date.now()
     if (curTime - lastTime > durationMs) {

@@ -329,7 +329,6 @@ function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
   }
 }
 
-
 function useWebRtcBroadcastChannel<T>(
   throttleMs = 0,
   setRtcMap: (map: Record<string, WrappedPresenceMessage<T>>) => void
@@ -337,12 +336,12 @@ function useWebRtcBroadcastChannel<T>(
   const db = useDatabase()
   const id = useUniqueClientId()
   const WebRtcBroadcastChannelRef = React.useRef<SyncedWebRTCConnections>()
-  const send = React.useCallback((msg: string) => WebRtcBroadcastChannelRef.current!.send(msg),[])
+  const send = React.useCallback((msg: string) => WebRtcBroadcastChannelRef.current!.send(msg), [])
   if (!WebRtcBroadcastChannelRef.current) {
     let rtcconns = new SyncedWebRTCConnections(db, id, throttleMs)
     rtcconns.setOnMessage(
-      (_msg) => throttle(() => setRtcMap({...rtcconns.getPeersToLastMsg()}), throttleMs)
-      )
+      throttle((_msg) => setRtcMap({ ...rtcconns.getPeersToLastMsg() }), throttleMs)
+    )
     WebRtcBroadcastChannelRef.current = rtcconns
   }
   return {
