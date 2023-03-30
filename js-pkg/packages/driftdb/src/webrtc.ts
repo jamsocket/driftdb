@@ -1,7 +1,7 @@
 import { DbConnection } from '.'
 import { PresenceListener, WrappedPresenceMessage } from './presence'
 
-type DataChannelMsg = { sender: string; value: any; lastSeen: number }
+export type DataChannelMsg = { sender: string; value: any; lastSeen: number }
 type OnMessage = (msg: DataChannelMsg) => void
 type ChannelSendReceive = { send: (msg: string) => void; onMessage: OnMessage }
 type ChannelCreator = (conn: RTCPeerConnection) => ChannelSendReceive
@@ -33,22 +33,41 @@ const getDataChannelCreator =
 
 interface Syncable<T> extends Iterable<T> {
   has(arg0: T): boolean
+  [index: string]: any
 }
+const SyncableProxyHandler: ProxyHandler<Syncable<string>> = { get(target, prop, receiver) {
+    const val = Reflect.get(target,prop)
+    if(prop === "has") {
+      if (target instanceof Array) { return target.includes.bind(target) }
+      if (Object.getPrototypeOf(target).constructor.name === "Object")
+	return (elem: any) => Object.hasOwn(target, elem)
+    }
+    if(prop === Symbol.iterator) {
+      if (target instanceof Map) {
+	return target.keys.bind(target)
+      }
+      if (Object.getPrototypeOf(target).constructor.name === "Object") {
+	return () => Object.keys(target).values()
+      }
+    }
+    return (val instanceof Function) ?
+      (...args: any[]) => Reflect.apply(val, target, args)
+    : Reflect.get(target, prop ,receiver) 
+  }
+}
+const makeSyncable = (a: any) => new Proxy<Syncable<string>>(
+  a as Syncable<string>, SyncableProxyHandler
+)
+
 function* difference<T>(setA: Iterable<T>, setB: Syncable<T>) {
   for (const elem of setA) {
     if (!setB.has(elem)) yield elem
   }
 }
 
-const mapToSyncable = <K>(a: Map<K, any>): Syncable<K> => {
-  return {
-    [Symbol.iterator]: a.keys.bind(a),
-    has: a.has.bind(a)
-  }
-}
-
 export class WebRTCConnections {
   public connMap = new Map<string, ChannelSendReceive>()
+  private connMapSyncable = makeSyncable(this.connMap)
   private onMessage = (msg: DataChannelMsg) => {
     console.log('unhandled', msg)
   }
@@ -81,8 +100,9 @@ export class WebRTCConnections {
   }
 
   peers() {
-    return mapToSyncable(this.connMap)
+    return this.connMapSyncable 
   }
+
 }
 
 function sync<T>(a: Syncable<T>, b: Syncable<T>, cb1: (arg: T) => void, cb2: (arg: T) => void) {
@@ -96,7 +116,8 @@ function sync<T>(a: Syncable<T>, b: Syncable<T>, cb1: (arg: T) => void, cb2: (ar
 
 export class SyncedWebRTCConnections extends WebRTCConnections {
   presence: PresenceListener<string>
-  #peersToLastMsg: Record<string, WrappedPresenceMessage<any>> = {}
+  private peersToLastMsg: Record<string, WrappedPresenceMessage<any>> = {}
+  private syncablePeersToLastMsg= makeSyncable(this.peersToLastMsg) 
   constructor(db: DbConnection, id: string, throttle = 0) {
     super(db, id, throttle)
     this.presence = new PresenceListener<string>({
@@ -104,8 +125,7 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
       db,
       clientId: id,
       callback: (msg) => {
-        let peers = Object.values(msg).map(({ value }) => value)
-        this.sync({ [Symbol.iterator]: peers.values.bind(peers), has: peers.includes.bind(peers) })
+	this.sync(makeSyncable(Object.values(msg).map(({ value }) => value)))
       },
       minPresenceInterval: throttle
     })
@@ -117,7 +137,7 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   setOnMessage(func: OnMessage) {
     super.setOnMessage((msg) => {
       func(msg)
-      this.#peersToLastMsg[msg.sender] = msg
+      this.peersToLastMsg[msg.sender] = msg
     })
   }
 
@@ -128,21 +148,17 @@ export class SyncedWebRTCConnections extends WebRTCConnections {
   }
 
   sync(newPeers: Syncable<string>) {
-    newPeers = new Set(newPeers) //since this is used twice it can't be an iterable
     sync(
-      {
-        [Symbol.iterator]: () => Object.keys(this.#peersToLastMsg).values(),
-        has: Reflect.has.bind({}, this.#peersToLastMsg)
-      },
+      this.syncablePeersToLastMsg,
       newPeers,
-      (peer) => Reflect.deleteProperty(this.#peersToLastMsg, peer),
-      () => {}
+      (peer) => Reflect.deleteProperty(this.peersToLastMsg, peer),
+      (_peer) => { }
     )
     sync(this.peers(), newPeers, this.removeConnection.bind(this), this.addNewConnection.bind(this))
   }
 
-  peersToLastMsg() {
-    return this.#peersToLastMsg
+  getPeersToLastMsg() {
+    return this.peersToLastMsg
   }
 }
 
@@ -272,14 +288,10 @@ function createWebRTCConnection(
 
 type AnyFunc = (...args: any[]) => void
 function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
-  let block = false
+  let lastTime = Date.now()
   return (...args) => {
-    if (!block) {
-      fn(...args)
-      block = true
-      setTimeout(() => {
-        block = false
-      }, durationMs)
-    }
+    let curTime = Date.now()
+    if (lastTime - curTime > durationMs) fn(...args)
+    lastTime = curTime
   }
 }
