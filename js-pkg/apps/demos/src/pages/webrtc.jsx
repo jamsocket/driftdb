@@ -1,5 +1,11 @@
 import * as React from 'react'
-import { DriftDBProvider, usePresence, useLatency, StatusIndicator, RoomQRCode } from 'driftdb-react'
+import {
+  DriftDBProvider,
+  usePresence,
+  useLatency,
+  StatusIndicator,
+  RoomQRCode
+} from 'driftdb-react'
 import { Chat } from '../components/chat.jsx'
 import { DRIFTDB_URL } from '../config'
 

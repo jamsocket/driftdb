@@ -7,9 +7,11 @@ import {
   RoomResult,
   StateListener,
   uniqueClientId,
-  WrappedPresenceMessage
+  WrappedPresenceMessage,
+  SyncedWebRTCConnections,
+  DataChannelMsg
 } from 'driftdb'
-import React, { SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, SetStateAction, useState } from 'react'
 
 const ROOM_ID_KEY = '_driftdb_room'
 
@@ -313,6 +315,65 @@ export function useLatency(): number | null {
   }, [db])
 
   return latency
+}
+
+type AnyFunc = (...args: any[]) => void
+function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
+  let lastTime = 0
+  return (...args) => {
+    let curTime = Date.now()
+    if (curTime - lastTime > durationMs) {
+      fn(...args)
+      lastTime = curTime
+    }
+  }
+}
+
+/**
+ * A React hook that creates a WebRTC based broadcast channel. sending messages to the channel
+ * will send messages to all peers in the same DriftDB room. It takes a callback that will run
+ * every `throttleMs` milliseconds with an object containing a mapping from peer ID to that peer's
+ * most recent message.
+ *  @param throttleMs minimum interval between setRtcMap calls
+ *  @param setRtcMap function that gets called with a record from peers to their most recent message
+ *  @returns function that takes a message and sends it to all peers.
+ */
+function useWebRtcBroadcastChannel<T>(
+  throttleMs = 0,
+  setRtcMap: (map: Record<string, WrappedPresenceMessage<T>>) => void
+) {
+  const db = useDatabase()
+  const id = useUniqueClientId()
+  const WebRtcBroadcastChannelRef = React.useRef<SyncedWebRTCConnections>()
+  const send = React.useCallback((msg: string) => WebRtcBroadcastChannelRef.current!.send(msg), [])
+  if (!WebRtcBroadcastChannelRef.current) {
+    let rtcconns = new SyncedWebRTCConnections(db, id, throttleMs)
+    rtcconns.setOnMessage(
+      throttle((_msg) => setRtcMap({ ...rtcconns.getPeersToLastMsg() }), throttleMs)
+    )
+    WebRtcBroadcastChannelRef.current = rtcconns
+  }
+  return send
+}
+
+/**
+ * A React hook that returns a map of the current presence of all clients in the current room.
+ * The client also passes its own value, which wil be included in the map for other clients
+ *  @param value The value that will be included in the map for other clients.
+ *  @param throttle The minimum interval between messages being sent.
+ *         NOTE: any messages sent in the interval will be dropped.
+ *  @returns A map of the current presence of all clients in the current room.
+ */
+export function useWebRtcPresence<T>(
+  value: T,
+  throttle = 0
+): Record<string, WrappedPresenceMessage<T>> {
+  const [rtcMap, setRtcMap] = useState<Record<string, WrappedPresenceMessage<T>>>({})
+  const send = useWebRtcBroadcastChannel(throttle, setRtcMap)
+  React.useEffect(() => {
+    send(JSON.stringify(value))
+  }, [value])
+  return rtcMap
 }
 
 /**

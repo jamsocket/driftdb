@@ -9,6 +9,8 @@ export type { PresenceMessage, WrappedPresenceMessage } from './presence'
 export { Reducer } from './reducer'
 export { StateListener } from './state'
 export type { ConnectionStatus, Key, MessageFromDb, MessageToDb, SequenceValue } from './types'
+export { SyncedWebRTCConnections } from './webrtc'
+export type { DataChannelMsg } from './webrtc'
 
 const CLIENT_ID_KEY = '_driftdb_client_id'
 
