@@ -329,6 +329,15 @@ function throttle(fn: AnyFunc, durationMs: number): AnyFunc {
   }
 }
 
+/**
+ * A React hook that creates a WebRTC based broadcast channel. sending messages to the channel
+ * will send messages to all peers in the same DriftDB room. It takes a callback that will run
+ * every `throttleMs` milliseconds with an object containing a mapping from peer ID to that peer's
+ * most recent message.
+ *  @param throttleMs minimum interval between setRtcMap calls
+ *  @param setRtcMap function that gets called with a record from peers to their most recent message
+ *  @returns function that takes a message and sends it to all peers.
+ */
 function useWebRtcBroadcastChannel<T>(
   throttleMs = 0,
   setRtcMap: (map: Record<string, WrappedPresenceMessage<T>>) => void
@@ -344,9 +353,7 @@ function useWebRtcBroadcastChannel<T>(
     )
     WebRtcBroadcastChannelRef.current = rtcconns
   }
-  return {
-    send
-  }
+  return send
 }
 
 /**
@@ -362,7 +369,7 @@ export function useWebRtcPresence<T>(
   throttle = 0
 ): Record<string, WrappedPresenceMessage<T>> {
   const [rtcMap, setRtcMap] = useState<Record<string, WrappedPresenceMessage<T>>>({})
-  const { send } = useWebRtcBroadcastChannel(throttle, setRtcMap)
+  const send = useWebRtcBroadcastChannel(throttle, setRtcMap)
   React.useEffect(() => {
     send(JSON.stringify(value))
   }, [value])
