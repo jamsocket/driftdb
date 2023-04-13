@@ -11,6 +11,51 @@ DriftDB is a real-time data backend for browser-based applications.
 
 For more information, see [driftdb.com](https://driftdb.com).
 
+## Local Development
+
+### TypeScript libraries
+
+To prepare the environment, install the dependencies and run a turborepo build:
+
+    # from repo root
+    cd js-pkg
+    npm i
+    npm run build
+
+To run demos, run:
+
+    # from repo root
+    cd js-pkg/apps/demos
+    npm run dev
+
+To test the TypeScript libraries, first run a local development server:
+
+    # from repo root
+    cargo run -p driftdb-server
+
+Then, with the local development server running:
+
+    # from repo root
+    cd js-pkg/apps/tests
+    npm test
+
+### Server
+
+Server development requires the Rust toolchain (including `cargo`) to be installed.
+Developing and deploying the `driftdb-worker` (Cloudflare worker) also requires Cloudflare's
+Wrangler tool.
+
+To run tests:
+
+    # from repo root
+    cargo test
+
+To run a local development server:
+
+    cargo run -p driftdb-server
+
+For instructions on `driftdb-worker`, see `driftdb-worker/README.md`.
+
 ## Structure of this repo
 
 - `docs/`: main online documentation and website for driftdb, available on the web at [driftdb.com](https://driftdb.com).
