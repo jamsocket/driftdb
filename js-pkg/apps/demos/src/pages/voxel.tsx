@@ -194,6 +194,8 @@ export function VoxelEditor() {
           voxel: { position, color, opacity: 1 }
         })
       }
+
+      event.stopPropagation()
     },
     [color, dispatch]
   )
