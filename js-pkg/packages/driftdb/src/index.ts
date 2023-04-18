@@ -14,6 +14,11 @@ export type { DataChannelMsg } from './webrtc'
 
 const CLIENT_ID_KEY = '_driftdb_client_id'
 
+export interface SubscribeOptions {
+  /** Whether to replay history when subscribing. */
+  replay?: boolean
+}
+
 /**
  * A connection to a DriftDB room.
  */
@@ -213,13 +218,16 @@ export class DbConnection {
   subscribe(
     key: Key,
     listener: (event: SequenceValue) => void,
-    sizeCallback?: (size: number) => void
+    sizeCallback?: (size: number) => void,
+    subscribeOptions?: SubscribeOptions
   ) {
     this.subscriptions.subscribe(key, listener)
     if (sizeCallback) {
       this.sizeSubscriptions.subscribe(key, sizeCallback)
     }
-    this.send({ type: 'get', key, seq: 0 })
+    if (subscribeOptions?.replay ?? true) {
+      this.send({ type: 'get', key, seq: 0 })
+    }
   }
 
   /**
