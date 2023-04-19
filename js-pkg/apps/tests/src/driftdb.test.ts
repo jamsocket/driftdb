@@ -151,7 +151,7 @@ test('Subscribe and optionally receive history.', async () => {
     value: 'foo'
   })
 
-  let result = await expecter.expect('Optimistic set not received.')
+  let result = await expecter.expect('Expected "set" not received.')
   expect(result).toEqual({
     seq: 1,
     value: 'foo'
@@ -162,7 +162,7 @@ test('Subscribe and optionally receive history.', async () => {
   let db2 = await connectToRoom(room)
   let expecter2 = new CallbackExpecter<SequenceValue>()
   db2.subscribe('key', expecter2.accept)
-  let result2 = await expecter2.expect('Optimistic set not received.')
+  let result2 = await expecter2.expect('Expected "set" not received.')
   expect(result2).toEqual({
     seq: 1,
     value: 'foo'
