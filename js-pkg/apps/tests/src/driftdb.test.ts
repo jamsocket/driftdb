@@ -138,6 +138,57 @@ test('Send and receive binary.', async () => {
   db.disconnect()
 })
 
+test('Subscribe and optionally receive history.', async () => {
+  let { db, room } = await connectToNewRoom()
+
+  let expecter = new CallbackExpecter<SequenceValue>()
+  db.subscribe('key', expecter.accept)
+
+  db.send({
+    type: 'push',
+    key: 'key',
+    action: { type: 'append' },
+    value: 'foo'
+  })
+
+  let result = await expecter.expect('Expected "set" not received.')
+  expect(result).toEqual({
+    seq: 1,
+    value: 'foo'
+  })
+
+  db.disconnect()
+
+  let db2 = await connectToRoom(room)
+  let expecter2 = new CallbackExpecter<SequenceValue>()
+  db2.subscribe('key', expecter2.accept)
+  let result2 = await expecter2.expect('Expected "set" not received.')
+  expect(result2).toEqual({
+    seq: 1,
+    value: 'foo'
+  })
+
+  db2.disconnect()
+
+  // When we disable history, we should not receive the value.
+  let db3 = await connectToRoom(room)
+  let expecter3 = new CallbackExpecter<SequenceValue>()
+  db3.subscribe('key', expecter3.accept, undefined, {replay: false})
+  db3.send({
+    type: 'push',
+    key: 'key',
+    action: { type: 'append' },
+    value: 'bar'
+  })
+  let result3 = await expecter3.expect('Optimistic set not received.')
+  expect(result3).toEqual({
+    seq: 2,
+    value: 'bar'
+  })
+
+  db3.disconnect()
+})
+
 test('Send and receive UInt8Array.', async () => {
   let { db } = await connectToNewRoom({ cbor: true })
 
