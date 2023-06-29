@@ -11,5 +11,5 @@ cargo build
 cargo run &
 
 cd ${BASE_DIR}/js-pkg/packages/driftdb
-npm ci
+npm ci --include=dev
 npm test
