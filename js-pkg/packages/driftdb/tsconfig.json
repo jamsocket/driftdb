@@ -5,7 +5,7 @@
         "lib": ["esnext", "dom"],
         "composite": true,
         "outDir": "dist",
-        "rootDir": "src",
+        "rootDir": ".",
     },
     "include": [
         "."
@@ -13,6 +13,7 @@
     "exclude": [
         "dist",
         "build",
+        "tests",
         "node_modules"
     ],
 }
