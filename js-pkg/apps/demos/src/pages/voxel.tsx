@@ -242,8 +242,6 @@ export function VoxelEditor() {
 
 export default function App() {
   return (
-    <DriftDBProvider api={DRIFTDB_URL}>
-      <VoxelEditor />
-    </DriftDBProvider>
+    <div>ok</div>
   )
 }
