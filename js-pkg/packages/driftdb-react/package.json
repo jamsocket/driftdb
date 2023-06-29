@@ -1,7 +1,7 @@
 {
   "name": "driftdb-react",
   "scripts": {
-    "build": "tsup src/index.tsx --format cjs --dts",
+    "build": "tsc",
     "dev": "npm run build -- --watch"
   },
   "version": "1.0.12",
@@ -15,8 +15,7 @@
     "driftdb": "*"
   },
   "devDependencies": {
-    "@types/react": "^18.0.27",
-    "tsup": "^6.6.3"
+    "@types/react": "^18.0.27"
   },
   "peerDependencies": {
     "react": "^18.2.0"

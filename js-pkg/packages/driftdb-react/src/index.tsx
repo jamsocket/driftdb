@@ -9,7 +9,6 @@ import {
   uniqueClientId,
   WrappedPresenceMessage,
   SyncedWebRTCConnections,
-  DataChannelMsg
 } from 'driftdb'
 import React, { useCallback, useEffect, useRef, SetStateAction, useState } from 'react'
 
