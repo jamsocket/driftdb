@@ -145,8 +145,11 @@ export class DbConnection {
             this.activeLatencyTest = null
           }
           break
+        case 'error':
+          console.error('Error from server:', message)
+          break
         default:
-          console.error('Unknown message type', message.type)
+          console.error('Unknown message type', (message as MessageFromDb).type)
       }
     }
 
