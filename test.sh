@@ -12,12 +12,4 @@ cargo run &
 
 cd ${BASE_DIR}/js-pkg/packages/driftdb
 npm ci
-npm run build
-
-cd ${BASE_DIR}/js-pkg/packages/driftdb-react
-npm ci
-npm run build
-
-cd ${BASE_DIR}/js-pkg/apps/tests
-npm ci
-npm run test
+npm test
