@@ -162,10 +162,11 @@ impl WrappedWebSocket {
 
     fn send(&self, message: &MessageFromDatabase) -> Result<()> {
         if self.use_cbor {
-            let message = serde_cbor::to_vec(message).map_err(|_| {
+            let mut buffer = Vec::new();
+            ciborium::ser::into_writer(&message, &mut buffer).map_err(|_| {
                 worker::Error::RustError("Error encoding message to CBOR.".to_string())
             })?;
-            self.socket.send_with_bytes(&message)?;
+            self.socket.send_with_bytes(&buffer)?;
         } else {
             let message = serde_json::to_string(message)?;
             self.socket.send_with_str(&message)?;
@@ -227,7 +228,7 @@ impl DbRoom {
                                     .unwrap();
                             }
                         } else if let Some(bytes) = msg.bytes() {
-                            if let Ok(message) = serde_cbor::from_slice(bytes.as_slice()) {
+                            if let Ok(message) = ciborium::from_reader(bytes.as_slice()) {
                                 // Reset the timeout for cleaning up the database.
                                 state.bump_alarm().await.expect("Error bumping alarm");
                                 conn.send_message(&message).unwrap();

@@ -1,5 +1,5 @@
 use crate::types::{Action, Key, SequenceNumber, SequenceValue};
-use serde_cbor::Value;
+use ciborium::value::Value;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Default)]

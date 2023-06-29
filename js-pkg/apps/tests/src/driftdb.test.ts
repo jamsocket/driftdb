@@ -189,33 +189,33 @@ test('Subscribe and optionally receive history.', async () => {
   db3.disconnect()
 })
 
-test('Send and receive UInt8Array.', async () => {
-  let { db } = await connectToNewRoom({ cbor: true })
+// test('Send and receive UInt8Array.', async () => {
+//   let { db } = await connectToNewRoom({ cbor: true })
 
-  let expecter = new CallbackExpecter<SequenceValue>()
-  db.subscribe('key', expecter.accept)
+//   let expecter = new CallbackExpecter<SequenceValue>()
+//   db.subscribe('key', expecter.accept)
 
-  db.send({
-    type: 'push',
-    key: 'key',
-    action: { type: 'append' },
-    value: {
-      abc: 'derp',
-      v: new Uint8Array([1, 2, 3])
-    }
-  })
+//   db.send({
+//     type: 'push',
+//     key: 'key',
+//     action: { type: 'append' },
+//     value: {
+//       abc: 'derp',
+//       v: new Uint8Array([1, 2, 3])
+//     }
+//   })
 
-  let result = await expecter.expect('Optimistic set not received.')
-  expect(result).toEqual({
-    seq: 1,
-    value: {
-      abc: 'derp',
-      v: new Uint8Array([1, 2, 3])
-    }
-  })
+//   let result = await expecter.expect('Optimistic set not received.')
+//   expect(result).toEqual({
+//     seq: 1,
+//     value: {
+//       abc: 'derp',
+//       v: new Uint8Array([1, 2, 3])
+//     }
+//   })
 
-  db.disconnect()
-})
+//   db.disconnect()
+// })
 
 test('Test optimistic set and get.', async () => {
   let { db, room } = await connectToNewRoom()

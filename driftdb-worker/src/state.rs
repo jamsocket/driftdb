@@ -4,7 +4,7 @@ use driftdb::{
     ApplyResult, Database, DeleteInstruction, Key, PushInstruction, Store, ValueLog,
 };
 use gloo_utils::format::JsValueSerdeExt;
-use serde_cbor::Value;
+use ciborium::value::Value;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use worker::{console_log, wasm_bindgen::JsValue, wasm_bindgen_futures};
 use worker::{ListOptions, Result, State};
@@ -128,7 +128,8 @@ impl PersistedDb {
                             KeyAndSeq::new(apply_result.key.clone(), sequence_value.seq)
                                 .to_string();
 
-                        let buffer = serde_cbor::to_vec(&sequence_value.value).unwrap();
+                        let mut buffer = Vec::new();
+                        ciborium::ser::into_writer(&sequence_value.value, &mut buffer).unwrap();
 
                         storage
                             .put(&storage_key, &buffer)
@@ -189,7 +190,7 @@ fn read_old_way(value: &JsValue) -> Result<(Value, String)> {
 fn read_new_way(value: &JsValue) -> Result<(Value, String)> {
     let (key, value): (String, Vec<u8>) = JsValueSerdeExt::into_serde(value)?;
 
-    let value: Value = serde_cbor::from_slice(value.as_slice())
+    let value: Value = ciborium::de::from_reader(value.as_slice())
         .map_err(|_| worker::Error::RustError("Error interpreting value as CBOR.".to_string()))?;
     Ok((value, key))
 }
