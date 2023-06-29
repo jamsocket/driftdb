@@ -19,6 +19,11 @@ export interface SubscribeOptions {
   replay?: boolean
 }
 
+export type DbConnectionParams = {
+  // The constructor to use for WebSocket connections.
+  websocketConstructor?: typeof WebSocket
+}
+
 /**
  * A connection to a DriftDB room.
  */
@@ -35,6 +40,17 @@ export class DbConnection {
   activeLatencyTest: LatencyTest | null = null
   cbor = false
   closed = false
+  WebSocket: typeof WebSocket
+
+  constructor(params?: DbConnectionParams) {
+    if (params?.websocketConstructor !== undefined) {
+      this.WebSocket = params?.websocketConstructor
+    } else if (typeof WebSocket !== 'undefined') {
+      this.WebSocket = WebSocket
+    } else {
+      throw new Error('websocketConstructor must be provided if WebSocket is not available')
+    }
+  }
 
   /**
    * Connect to a DriftDB room.
@@ -62,7 +78,7 @@ export class DbConnection {
       this.connection.close()
     }
 
-    this.connection = new WebSocket(dbUrl)
+    this.connection = new (this.WebSocket)(dbUrl)
     this.connection.binaryType = 'arraybuffer'
 
     this.connection.onopen = () => {
@@ -144,7 +160,7 @@ export class DbConnection {
    * @returns A promise that resolves to the latency in milliseconds, or null if the connection is not open.
    */
   public testLatency(): Promise<number> | null {
-    if (!this.status.connected || this.connection?.readyState !== WebSocket.OPEN) {
+    if (!this.status.connected || this.connection?.readyState !== this.WebSocket.OPEN) {
       return null
     }
 
@@ -195,7 +211,7 @@ export class DbConnection {
    * @param message The message to send.
    */
   send(message: MessageToDb) {
-    if (!this.status.connected || this.connection?.readyState !== WebSocket.OPEN) {
+    if (!this.status.connected || this.connection?.readyState !== this.WebSocket.OPEN) {
       this.queue.push(message)
       return
     }
