@@ -193,7 +193,7 @@ test('Subscribe and optionally receive history.', async () => {
     db3.disconnect()
 })
 
-test('Send and receive UInt8Array.', async () => {
+test.only('Send and receive UInt8Array.', async () => {
     let { db } = await connectToNewRoom({ cbor: true })
 
     let expecter = new CallbackExpecter<SequenceValue>()

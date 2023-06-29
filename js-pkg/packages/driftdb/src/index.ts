@@ -63,6 +63,7 @@ export class DbConnection {
     if (cbor) {
       dbUrl = dbUrl + '?cbor=true'
     }
+    console.log("here1", dbUrl)
 
     this.dbUrl = dbUrl
     this.cbor = cbor
