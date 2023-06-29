@@ -48,7 +48,12 @@ export class DbConnection {
     } else if (typeof WebSocket !== 'undefined') {
       this.WebSocket = WebSocket
     } else {
-      throw new Error('websocketConstructor must be provided if WebSocket is not available')
+      console.warn('No WebSocket constructor provided. This is expected during SSR.')
+      this.WebSocket = class WebSocket {
+        constructor() {
+          throw new Error('No WebSocket constructor provided.')
+        }
+      } as any
     }
   }
 
