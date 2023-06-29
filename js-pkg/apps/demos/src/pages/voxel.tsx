@@ -102,13 +102,13 @@ function getPosition(event: ThreeEvent<PointerEvent>): Vector3Tuple | null {
 
 type VoxelAction =
   | {
-      type: 'add'
-      voxel: Voxel
-    }
+    type: 'add'
+    voxel: Voxel
+  }
   | {
-      type: 'remove'
-      name: string
-    }
+    type: 'remove'
+    name: string
+  }
 
 function voxelReducer(state: Record<string, Voxel>, action: VoxelAction): Record<string, Voxel> {
   if (action.type === 'add') {

@@ -19,6 +19,11 @@ export interface SubscribeOptions {
   replay?: boolean
 }
 
+export type DbConnectionParams = {
+  // The constructor to use for WebSocket connections.
+  websocketConstructor?: typeof WebSocket
+}
+
 /**
  * A connection to a DriftDB room.
  */
@@ -35,6 +40,22 @@ export class DbConnection {
   activeLatencyTest: LatencyTest | null = null
   cbor = false
   closed = false
+  WebSocket: typeof WebSocket
+
+  constructor(params?: DbConnectionParams) {
+    if (params?.websocketConstructor !== undefined) {
+      this.WebSocket = params?.websocketConstructor
+    } else if (typeof WebSocket !== 'undefined') {
+      this.WebSocket = WebSocket
+    } else {
+      console.warn('No WebSocket constructor provided. This is expected during SSR.')
+      this.WebSocket = class WebSocket {
+        constructor() {
+          throw new Error('No WebSocket constructor provided.')
+        }
+      } as any
+    }
+  }
 
   /**
    * Connect to a DriftDB room.
@@ -47,7 +68,6 @@ export class DbConnection {
     if (cbor) {
       dbUrl = dbUrl + '?cbor=true'
     }
-
     this.dbUrl = dbUrl
     this.cbor = cbor
 
@@ -62,7 +82,7 @@ export class DbConnection {
       this.connection.close()
     }
 
-    this.connection = new WebSocket(dbUrl)
+    this.connection = new (this.WebSocket)(dbUrl)
     this.connection.binaryType = 'arraybuffer'
 
     this.connection.onopen = () => {
@@ -130,8 +150,11 @@ export class DbConnection {
             this.activeLatencyTest = null
           }
           break
+        case 'error':
+          console.error('Error from server:', message)
+          break
         default:
-          console.error('Unknown message type', message.type)
+          console.error('Unknown message type', (message as MessageFromDb).type)
       }
     }
 
@@ -144,7 +167,7 @@ export class DbConnection {
    * @returns A promise that resolves to the latency in milliseconds, or null if the connection is not open.
    */
   public testLatency(): Promise<number> | null {
-    if (!this.status.connected || this.connection?.readyState !== WebSocket.OPEN) {
+    if (!this.status.connected || this.connection?.readyState !== this.WebSocket.OPEN) {
       return null
     }
 
@@ -195,7 +218,7 @@ export class DbConnection {
    * @param message The message to send.
    */
   send(message: MessageToDb) {
-    if (!this.status.connected || this.connection?.readyState !== WebSocket.OPEN) {
+    if (!this.status.connected || this.connection?.readyState !== this.WebSocket.OPEN) {
       this.queue.push(message)
       return
     }
