@@ -5,7 +5,7 @@ import {
     RoomResult,
     HttpConnection,
     SequenceValue
-} from '../src/index'
+} from '../index'
 import WebSocket from 'ws';
 
 // "localhost" breaks on some versions of node because of this
