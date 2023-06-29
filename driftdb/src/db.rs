@@ -171,8 +171,8 @@ mod tests {
     };
     use serde_json::json;
 
-    fn json_to_cbor(value: serde_json::Value) -> serde_cbor::Value {
-        serde_cbor::value::to_value(&value).unwrap()
+    fn json_to_cbor(value: serde_json::Value) -> ciborium::value::Value {
+        ciborium::Value::serialized(&value).unwrap()
     }
 
     fn subscribe(conn: &Connection, key: &str) {
