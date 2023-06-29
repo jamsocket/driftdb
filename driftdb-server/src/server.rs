@@ -12,7 +12,7 @@ use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
 use hyper::http::header;
 use hyper::{Method, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, fmt::Debug};
 use tower_http::{
     cors::{AllowOrigin, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
@@ -20,14 +20,14 @@ use tower_http::{
 use tracing::Level;
 use uuid::Uuid;
 
-struct TypedWebSocket<Inbound: DeserializeOwned, Outbound: Serialize> {
+struct TypedWebSocket<Inbound: DeserializeOwned + Debug, Outbound: Serialize + Debug> {
     socket: WebSocket,
     cbor: bool,
     _ph_inbound: std::marker::PhantomData<Inbound>,
     _ph_outbound: std::marker::PhantomData<Outbound>,
 }
 
-impl<Inbound: DeserializeOwned, Outbound: Serialize> TypedWebSocket<Inbound, Outbound> {
+impl<Inbound: DeserializeOwned + Debug, Outbound: Serialize + Debug> TypedWebSocket<Inbound, Outbound> {
     pub fn new(socket: WebSocket, cbor: bool) -> Self {
         Self {
             socket,
