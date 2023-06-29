@@ -1,4 +1,4 @@
-import * as CBOR from 'cbor-web'
+import { decode, Encoder } from 'cbor-x';
 import { LatencyTest } from './latency'
 import { ConnectionStatus, Key, MessageFromDb, MessageToDb, SequenceValue } from './types'
 export { Api } from './api'
@@ -121,7 +121,8 @@ export class DbConnection {
     this.connection.onmessage = (event) => {
       let message: MessageFromDb
       if (event.data instanceof ArrayBuffer) {
-        message = CBOR.decode(event.data)
+        let data = new Uint8Array(event.data)
+        message = decode(data)
       } else {
         message = JSON.parse(event.data)
       }
@@ -224,7 +225,12 @@ export class DbConnection {
     }
 
     if (this.cbor) {
-      this.connection!.send(CBOR.encode(message))
+      const encoder = new Encoder({
+        tagUint8Array: false,
+        mapsAsObjects: false,
+        useRecords: false,
+      })
+      this.connection!.send(encoder.encode(message))
     } else {
       this.connection!.send(JSON.stringify(message))
     }
