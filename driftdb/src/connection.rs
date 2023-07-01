@@ -31,7 +31,12 @@ impl Connection {
             MessageToDatabase::Push { key, value, action } => database.push(key, value, &action),
             MessageToDatabase::Get { seq, key } => {
                 database.subscribe(key, Arc::downgrade(&self));
-                database.get(key, *seq)
+                if let Some(seq) = seq {
+                    // Send prior events on the stream if sequence number is provided.
+                    database.get(key, *seq)
+                } else {
+                    None
+                }
             }
             MessageToDatabase::Ping { nonce } => Some(MessageFromDatabase::Pong { nonce: *nonce }),
         };

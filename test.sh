@@ -12,4 +12,4 @@ cargo run &
 
 cd ${BASE_DIR}/js-pkg/packages/driftdb
 npm ci --include=dev
-npm test
+npm test -- --detectOpenHandles

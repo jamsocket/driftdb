@@ -81,12 +81,16 @@ pub enum MessageToDatabase {
         /// Key to get.
         key: Key,
         /// Sequence number to start from.
-        #[serde(default)]
-        seq: SequenceNumber,
+        #[serde(default="default_seq")]
+        seq: Option<SequenceNumber>,
     },
     Ping {
         nonce: Option<u64>,
     },
+}
+
+fn default_seq() -> Option<SequenceNumber> {
+    Some(SequenceNumber(0))
 }
 
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]

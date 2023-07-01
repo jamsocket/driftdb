@@ -181,7 +181,7 @@ mod tests {
 
     fn subscribe(conn: &Arc<Connection>, key: &str) {
         conn.send_message(&MessageToDatabase::Get {
-            seq: SequenceNumber::default(),
+            seq: Some(SequenceNumber::default()),
             key: key.into(),
         })
         .unwrap();

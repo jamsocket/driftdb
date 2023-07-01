@@ -254,9 +254,9 @@ export class DbConnection {
     if (sizeCallback) {
       this.sizeSubscriptions.subscribe(key, sizeCallback)
     }
-    if (subscribeOptions?.replay ?? true) {
-      this.send({ type: 'get', key, seq: 0 })
-    }
+    let replay = subscribeOptions?.replay ?? true
+    let seq = replay ? 0 : null
+    this.send({ type: 'get', key, seq })
   }
 
   /**
