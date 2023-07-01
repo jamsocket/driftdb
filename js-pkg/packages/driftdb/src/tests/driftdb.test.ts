@@ -142,6 +142,18 @@ test('Send and receive binary.', async () => {
     db.disconnect()
 })
 
+test('Attempt to connect to a room that has not been created.', async () => {
+    let api = new Api(API_SERVER)
+    let room = await api.newRoom()
+    room.socket_url = room.socket_url.replace(room.room, 'foo')
+    let db = new DbConnection({
+        websocketConstructor: WebSocket as any,
+    })
+    await expect(
+       db.connect(room.socket_url)
+    ).rejects.toEqual('Room does not exist.')
+})
+
 test('Subscribe and optionally receive history.', async () => {
     let { db, room } = await connectToNewRoom()
 

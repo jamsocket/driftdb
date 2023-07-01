@@ -101,11 +101,9 @@ export class DbConnection {
       resolve()
     }
 
-    this.connection.onerror = (err: any) => {
-      if (!this.closed) {
-        this.setStatus(false)
-        reject(err)
-      }
+    this.connection.onerror = (_err: any) => {
+      this.setStatus(false)
+      reject("Room does not exist.")
     }
 
     this.connection.onclose = () => {

@@ -7,7 +7,7 @@ use crate::{
 use ciborium::Value;
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, Weak},
+    sync::{Arc, Mutex, Weak}, fmt::Debug,
 };
 
 type ReplicaCallback = Arc<Box<dyn Fn(&ApplyResult) + Send + Sync>>;
@@ -18,6 +18,17 @@ pub struct DatabaseInner {
     debug_connections: Vec<Weak<Connection>>,
     replica_callback: Option<ReplicaCallback>,
     store: Store,
+}
+
+impl Debug for DatabaseInner {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DatabaseInner")
+            .field("subscriptions", &self.subscriptions)
+            .field("debug_connections", &self.debug_connections.len())
+            .field("replica_callback", &self.replica_callback.is_some())
+            .field("store", &self.store)
+            .finish()
+    }
 }
 
 impl DatabaseInner {
@@ -114,7 +125,7 @@ impl DatabaseInner {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Database {
     inner: Arc<Mutex<DatabaseInner>>,
 }

@@ -7,7 +7,6 @@ BASE_DIR=$(dirname "$0" | xargs realpath)
 echo "Testing standalone server."
 
 cd ${BASE_DIR}/driftdb-server
-killall driftdb-server 2> /dev/null || true
 cargo build
 cargo run &
 NATIVE_SERVER_PID=$!

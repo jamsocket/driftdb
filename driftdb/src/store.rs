@@ -2,12 +2,12 @@ use crate::types::{Action, Key, SequenceNumber, SequenceValue};
 use ciborium::value::Value;
 use std::collections::{HashMap, VecDeque};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ValueLog {
     pub values: VecDeque<SequenceValue>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Store {
     subjects: HashMap<Key, ValueLog>,
     sequence_number: SequenceNumber,
@@ -31,7 +31,7 @@ pub enum PushInstruction {
     PushStart(SequenceValue),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ApplyResult {
     pub key: Key,
 

@@ -184,12 +184,16 @@ async fn connection(
     State(room_map): State<Arc<RoomMap>>,
     Query(query): Query<ConnectionQuery>,
 ) -> Response<BoxBody> {
-    let database = room_map
-        .get(&room_id)
-        .expect("Room should have been created before connection.")
-        .clone();
-
-    ws.on_upgrade(move |socket| handle_socket(socket, database, query))
+    println!("Connection to room: {} {:?}", room_id, room_map);
+    if let Some(database) = room_map.get(&room_id) {
+        let database = database.clone();
+        ws.on_upgrade(move |socket| handle_socket(socket, database, query))
+    } else {
+        Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(BoxBody::default())
+            .unwrap()
+    }
 }
 
 async fn new_room(Host(hostname): Host, State(room_map): State<Arc<RoomMap>>) -> Json<RoomResult> {
