@@ -58,7 +58,7 @@ impl<Inbound: DeserializeOwned + Debug, Outbound: Serialize + Debug>
                         return Ok(Some(msg));
                     }
                     axum::extract::ws::Message::Text(msg) => {
-                        let msg = serde_json::from_str(&msg)?;
+                        let msg = serde_json::from_str(msg)?;
                         return Ok(Some(msg));
                     }
                 },
