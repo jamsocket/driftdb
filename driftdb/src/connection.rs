@@ -4,8 +4,10 @@ use crate::{
 };
 use std::sync::{Arc, Mutex, Weak};
 
+type Callback = Arc<Box<dyn Fn(&MessageFromDatabase) + Send + Sync>>;
+
 pub struct Connection {
-    pub callback: Arc<Box<dyn Fn(&MessageFromDatabase) + Send + Sync>>,
+    pub callback: Callback,
     database: Weak<Mutex<DatabaseInner>>,
 }
 
@@ -28,9 +30,9 @@ impl Connection {
         let mut database = db_lock.lock().unwrap();
 
         let result = match message {
-            MessageToDatabase::Push { key, value, action } => database.push(key, value, &action),
+            MessageToDatabase::Push { key, value, action } => database.push(key, value, action),
             MessageToDatabase::Get { seq, key } => {
-                database.subscribe(key, Arc::downgrade(&self));
+                database.subscribe(key, Arc::downgrade(self));
                 if let Some(seq) = seq {
                     // Send prior events on the stream if sequence number is provided.
                     database.get(key, *seq)

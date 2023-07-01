@@ -59,7 +59,7 @@ impl PersistedDb {
         }
 
         let state = self.state.state.as_ref();
-        let result = self.load_store(&state).await;
+        let result = self.load_store(state).await;
 
         let mut db = match result {
             Ok(store) => Database::new_from_store(store),

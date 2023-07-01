@@ -1,21 +1,22 @@
-use ciborium::Value;
-
 use crate::{
     connection::Connection,
     store::{ApplyResult, Store},
     types::{Action, MessageFromDatabase, SequenceNumber},
     Key,
 };
+use ciborium::Value;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex, Weak},
 };
 
+type ReplicaCallback = Arc<Box<dyn Fn(&ApplyResult) + Send + Sync>>;
+
 #[derive(Default)]
 pub struct DatabaseInner {
     connections: HashMap<Key, Vec<Weak<Connection>>>,
     debug_connections: Vec<Weak<Connection>>,
-    replica_callback: Option<Arc<Box<dyn Fn(&ApplyResult) + Send + Sync>>>,
+    replica_callback: Option<ReplicaCallback>,
     store: Store,
 }
 
@@ -75,7 +76,7 @@ impl DatabaseInner {
                 seq: seq_value.seq,
             };
 
-            if let Some(listeners) = self.connections.get_mut(&key) {
+            if let Some(listeners) = self.connections.get_mut(key) {
                 listeners.retain(|conn| {
                     if let Some(conn) = conn.upgrade() {
                         (conn.callback)(&message);
@@ -143,8 +144,7 @@ impl Database {
     where
         F: Fn(&MessageFromDatabase) + 'static + Send + Sync,
     {
-        let conn = Arc::new(Connection::new(callback, self.inner.clone()));
-        conn
+        Arc::new(Connection::new(callback, self.inner.clone()))
     }
 
     pub fn connect_debug<F>(&self, callback: F) -> Arc<Connection>

@@ -12,6 +12,7 @@ impl Key {
         Key(s)
     }
 
+    #[allow(clippy::len_without_is_empty)] // empty key is meaningless.
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -81,7 +82,7 @@ pub enum MessageToDatabase {
         /// Key to get.
         key: Key,
         /// Sequence number to start from.
-        #[serde(default="default_seq")]
+        #[serde(default = "default_seq")]
         seq: Option<SequenceNumber>,
     },
     Ping {

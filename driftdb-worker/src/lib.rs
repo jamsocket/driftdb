@@ -169,7 +169,7 @@ impl WrappedWebSocket {
             self.socket.send_with_bytes(&buffer)?;
         } else {
             let message = serde_json::to_string(message)?;
-            self.socket.send_with_str(&message)?;
+            self.socket.send_with_str(message)?;
         }
 
         Ok(())
@@ -191,8 +191,8 @@ impl DbRoom {
             .map(|(k, v)| (k.into_owned(), v.into_owned()))
             .collect();
 
-        let debug = query.get("debug").map(|s| s != "").unwrap_or(false);
-        let use_cbor = query.get("cbor").map(|s| s != "").unwrap_or(false);
+        let debug = query.get("debug").map(|s| !s.is_empty()).unwrap_or(false);
+        let use_cbor = query.get("cbor").map(|s| !s.is_empty()).unwrap_or(false);
 
         let server = WrappedWebSocket::new(server, use_cbor);
 
@@ -202,7 +202,7 @@ impl DbRoom {
             let conn = {
                 let server = server.clone();
                 let callback = move |message: &MessageFromDatabase| {
-                    server.send(&message).expect("could not send message");
+                    server.send(message).expect("could not send message");
                 };
 
                 if debug {
