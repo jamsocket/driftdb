@@ -14,7 +14,7 @@ type ReplicaCallback = Arc<Box<dyn Fn(&ApplyResult) + Send + Sync>>;
 
 #[derive(Default)]
 pub struct DatabaseInner {
-    connections: HashMap<Key, Vec<Weak<Connection>>>,
+    subscriptions: HashMap<Key, Vec<Weak<Connection>>>,
     debug_connections: Vec<Weak<Connection>>,
     replica_callback: Option<ReplicaCallback>,
     store: Store,
@@ -76,7 +76,7 @@ impl DatabaseInner {
                 seq: seq_value.seq,
             };
 
-            if let Some(listeners) = self.connections.get_mut(key) {
+            if let Some(listeners) = self.subscriptions.get_mut(key) {
                 listeners.retain(|conn| {
                     if let Some(conn) = conn.upgrade() {
                         (conn.callback)(&message);
@@ -100,7 +100,7 @@ impl DatabaseInner {
     }
 
     pub fn subscribe(&mut self, key: &Key, connection: Weak<Connection>) {
-        let listeners = self.connections.entry(key.clone()).or_default();
+        let listeners = self.subscriptions.entry(key.clone()).or_default();
         listeners.push(connection);
     }
 
