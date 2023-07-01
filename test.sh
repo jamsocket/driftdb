@@ -27,7 +27,7 @@ WORKER_SERVER_PID=$!
 
 # Wait for the server to start. Give up after 30 seconds.
 ok=0
-for i in {1..60}; do
+for i in {1..300}; do
   if curl -s http://127.0.0.1:8787 > /dev/null; then
     ok=1
     break
