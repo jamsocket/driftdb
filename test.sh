@@ -27,6 +27,6 @@ npm run dev &
 WORKER_SERVER_PID=$!
 
 cd ${BASE_DIR}/js-pkg/packages/driftdb
-DRIFTDB_SERVER=http://localhost:8787 npm test -- --forceExit --detectOpenHandles
+DRIFTDB_API=http://localhost:8787 npm test -- --forceExit --detectOpenHandles
 
 kill ${WORKER_SERVER_PID}
