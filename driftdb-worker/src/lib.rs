@@ -82,7 +82,7 @@ fn room_result(req: Request, room_id: &str, use_https: bool) -> Result<Response>
     let response_body = serde_json::to_string(&serde_json::json!({
         "room": room_id,
         "socket_url": format!("{}://{}/room/{}/connect", ws_protocol, host, room_id),
-        "http_url": format!("{}://{}/room/{}/", http_protocol, host, room_id),
+        "http_url": format!("{}://{}/room/{}/send", http_protocol, host, room_id),
     }))?;
 
     Response::ok(response_body)
@@ -273,7 +273,7 @@ impl DurableObject for DbRoom {
                 let db = self.db.get_db().await?;
                 let conn = db.connect(|_| {});
                 let message: MessageToDatabase = req.json().await?;
-                let response = conn.send_message(&message);
+                let response = conn.send_message(&message)?;
                 Response::from_json(&response)
             }
             _ => Response::error("Room command not found", 404),

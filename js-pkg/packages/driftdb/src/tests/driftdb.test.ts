@@ -10,7 +10,7 @@ import WebSocket from 'ws';
 
 // "localhost" breaks on some versions of node because of this
 // https://github.com/nodejs/undici/issues/1248#issuecomment-1214773044
-const API_SERVER = 'http://127.0.0.1:8080/'
+const API_SERVER = process.env.DRIFTDB_API ?? 'http://127.0.0.1:8080/'
 
 class CallbackExpecter<T> {
     private resolve: ((v: T) => void) | null = null

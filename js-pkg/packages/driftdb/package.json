@@ -3,7 +3,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "npm run build -- --watch",
-    "test": "jest"
+    "test": "jest --detectOpenHandles --forceExit"
   },
   "version": "1.0.12",
   "description": "",
