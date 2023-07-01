@@ -17,7 +17,7 @@ class CallbackExpecter<T> {
     private nextValue: T | null = null
     private timeout: number | null = null
 
-    expect(message: string, timeoutMillis = 5_000): Promise<T> {
+    expect(message: string, timeoutMillis = 3_000): Promise<T> {
         if (this.nextValue) {
             const value = this.nextValue
             this.nextValue = null

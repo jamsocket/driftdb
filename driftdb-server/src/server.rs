@@ -12,7 +12,7 @@ use driftdb::{Database, MessageFromDatabase, MessageToDatabase};
 use hyper::http::header;
 use hyper::{Method, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{net::SocketAddr, sync::Arc, fmt::Debug};
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 use tower_http::{
     cors::{AllowOrigin, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
@@ -27,7 +27,9 @@ struct TypedWebSocket<Inbound: DeserializeOwned + Debug, Outbound: Serialize + D
     _ph_outbound: std::marker::PhantomData<Outbound>,
 }
 
-impl<Inbound: DeserializeOwned + Debug, Outbound: Serialize + Debug> TypedWebSocket<Inbound, Outbound> {
+impl<Inbound: DeserializeOwned + Debug, Outbound: Serialize + Debug>
+    TypedWebSocket<Inbound, Outbound>
+{
     pub fn new(socket: WebSocket, cbor: bool) -> Self {
         Self {
             socket,
@@ -169,8 +171,9 @@ async fn post_message(
     Json(msg): Json<MessageToDatabase>,
 ) -> std::result::Result<Json<Option<MessageFromDatabase>>, StatusCode> {
     let database = room_map.get(&room_id).ok_or(StatusCode::NOT_FOUND)?;
+    let conn = database.connect(|_| {});
 
-    let result = database.send_message(&msg);
+    let result = conn.send_message(&msg).unwrap();
 
     Ok(Json(result))
 }

@@ -271,8 +271,9 @@ impl DurableObject for DbRoom {
             (Method::Get, "connect") => self.connect(req).await,
             (Method::Post, "send") => {
                 let db = self.db.get_db().await?;
+                let conn = db.connect(|_| {});
                 let message: MessageToDatabase = req.json().await?;
-                let response = db.send_message(&message);
+                let response = conn.send_message(&message);
                 Response::from_json(&response)
             }
             _ => Response::error("Room command not found", 404),

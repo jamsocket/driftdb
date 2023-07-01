@@ -20,18 +20,31 @@ impl Connection {
         }
     }
 
-    pub fn send_message(&self, message: &MessageToDatabase) -> Result<(), &str> {
-        if let Some(response) = self
-            .database
-            .upgrade()
-            .unwrap()
-            .lock()
-            .unwrap()
-            .send_message(message)
-        {
+    pub fn send_message(
+        self: &Arc<Self>,
+        message: &MessageToDatabase,
+    ) -> Result<Option<MessageFromDatabase>, &str> {
+        let db_lock = self.database.upgrade().ok_or("Database is gone")?;
+        let mut database = db_lock.lock().unwrap();
+
+        let result = match message {
+            MessageToDatabase::Push { key, value, action } => database.push(key, value, &action),
+            MessageToDatabase::Get { seq, key } => {
+                database.subscribe(key, Arc::downgrade(&self));
+                if let Some(seq) = seq {
+                    // Send prior events on the stream if sequence number is provided.
+                    database.get(key, *seq)
+                } else {
+                    None
+                }
+            }
+            MessageToDatabase::Ping { nonce } => Some(MessageFromDatabase::Pong { nonce: *nonce }),
+        };
+
+        if let Some(response) = result.clone() {
             (self.callback)(&response);
         };
 
-        Ok(())
+        Ok(result)
     }
 }
