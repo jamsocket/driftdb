@@ -1,102 +1,115 @@
+use ciborium::Value;
+
 use crate::{
     connection::Connection,
     store::{ApplyResult, Store},
-    types::{MessageFromDatabase, MessageToDatabase, SequenceNumber},
+    types::{Action, MessageFromDatabase, SequenceNumber},
+    Key,
 };
-use std::sync::{Arc, Mutex, Weak};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex, Weak},
+};
 
 #[derive(Default)]
 pub struct DatabaseInner {
-    connections: Vec<Weak<Connection>>,
+    connections: HashMap<Key, Vec<Weak<Connection>>>,
     debug_connections: Vec<Weak<Connection>>,
     replica_callback: Option<Arc<Box<dyn Fn(&ApplyResult) + Send + Sync>>>,
     store: Store,
 }
 
 impl DatabaseInner {
-    pub fn send_message(&mut self, message: &MessageToDatabase) -> Option<MessageFromDatabase> {
-        match message {
-            MessageToDatabase::Push { key, value, action } => {
-                let result = self.store.apply(key, value.clone(), action);
+    pub fn push(
+        &mut self,
+        key: &Key,
+        value: &Value,
+        action: &Action,
+    ) -> Option<MessageFromDatabase> {
+        let result = self.store.apply(key, value.clone(), action);
 
-                if !self.debug_connections.is_empty() {
-                    if result.mutates() {
-                        let data = self.store.get(key, SequenceNumber::default());
+        if !self.debug_connections.is_empty() {
+            if result.mutates() {
+                let data = self.store.get(key, SequenceNumber::default());
 
-                        let message = MessageFromDatabase::Init {
-                            data,
-                            key: key.clone(),
-                        };
-
-                        self.debug_connections.retain(|conn| {
-                            if let Some(conn) = conn.upgrade() {
-                                (conn.callback)(&message);
-                                true
-                            } else {
-                                false
-                            }
-                        });
-                    } else if let Some(seq_value) = &result.broadcast {
-                        let message = MessageFromDatabase::Push {
-                            key: key.clone(),
-                            value: seq_value.value.clone(),
-                            seq: seq_value.seq,
-                        };
-                        self.debug_connections.retain(|conn| {
-                            if let Some(conn) = conn.upgrade() {
-                                (conn.callback)(&message);
-                                true
-                            } else {
-                                false
-                            }
-                        });
-                    }
-                }
-
-                if result.mutates() {
-                    if let Some(replica_callback) = &self.replica_callback {
-                        (replica_callback)(&result);
-                    }
-                }
-
-                if let Some(seq_value) = result.broadcast {
-                    let message = MessageFromDatabase::Push {
-                        key: key.clone(),
-                        value: seq_value.value.clone(),
-                        seq: seq_value.seq,
-                    };
-                    self.connections.retain(|conn| {
-                        if let Some(conn) = conn.upgrade() {
-                            (conn.callback)(&message);
-                            true
-                        } else {
-                            false
-                        }
-                    });
-                }
-
-                if result.stream_size > 1 {
-                    let message = MessageFromDatabase::StreamSize {
-                        key: key.clone(),
-                        size: result.stream_size,
-                    };
-                    return Some(message);
-                }
-            }
-            MessageToDatabase::Get { seq, key } => {
-                let data = self.store.get(key, *seq);
-
-                return Some(MessageFromDatabase::Init {
+                let message = MessageFromDatabase::Init {
                     data,
                     key: key.clone(),
+                };
+
+                self.debug_connections.retain(|conn| {
+                    if let Some(conn) = conn.upgrade() {
+                        (conn.callback)(&message);
+                        true
+                    } else {
+                        false
+                    }
                 });
-            }
-            MessageToDatabase::Ping { nonce } => {
-                return Some(MessageFromDatabase::Pong { nonce: *nonce });
+            } else if let Some(seq_value) = &result.broadcast {
+                let message = MessageFromDatabase::Push {
+                    key: key.clone(),
+                    value: seq_value.value.clone(),
+                    seq: seq_value.seq,
+                };
+                self.debug_connections.retain(|conn| {
+                    if let Some(conn) = conn.upgrade() {
+                        (conn.callback)(&message);
+                        true
+                    } else {
+                        false
+                    }
+                });
             }
         }
 
+        if result.mutates() {
+            if let Some(replica_callback) = &self.replica_callback {
+                (replica_callback)(&result);
+            }
+        }
+
+        if let Some(seq_value) = result.broadcast {
+            let message = MessageFromDatabase::Push {
+                key: key.clone(),
+                value: seq_value.value.clone(),
+                seq: seq_value.seq,
+            };
+
+            if let Some(listeners) = self.connections.get_mut(&key) {
+                listeners.retain(|conn| {
+                    if let Some(conn) = conn.upgrade() {
+                        (conn.callback)(&message);
+                        true
+                    } else {
+                        false
+                    }
+                });
+            }
+        }
+
+        if result.stream_size > 1 {
+            let message = MessageFromDatabase::StreamSize {
+                key: key.clone(),
+                size: result.stream_size,
+            };
+            return Some(message);
+        }
+
         None
+    }
+
+    pub fn subscribe(&mut self, key: &Key, connection: Weak<Connection>) {
+        let listeners = self.connections.entry(key.clone()).or_default();
+        listeners.push(connection);
+    }
+
+    pub fn get(&self, key: &Key, seq: SequenceNumber) -> Option<MessageFromDatabase> {
+        let data = self.store.get(key, seq);
+
+        Some(MessageFromDatabase::Init {
+            data,
+            key: key.clone(),
+        })
     }
 }
 
@@ -126,21 +139,11 @@ impl Database {
         self.inner.lock().unwrap().replica_callback = Some(Arc::new(Box::new(callback)));
     }
 
-    pub fn send_message(&self, message: &MessageToDatabase) -> Option<MessageFromDatabase> {
-        let mut db = self.inner.lock().unwrap();
-        db.send_message(message)
-    }
-
     pub fn connect<F>(&self, callback: F) -> Arc<Connection>
     where
         F: Fn(&MessageFromDatabase) + 'static + Send + Sync,
     {
         let conn = Arc::new(Connection::new(callback, self.inner.clone()));
-        self.inner
-            .lock()
-            .unwrap()
-            .connections
-            .push(Arc::downgrade(&conn));
         conn
     }
 
@@ -168,6 +171,7 @@ mod tests {
     use crate::{
         tests::MessageStash,
         types::{Action, SequenceNumber, SequenceValue},
+        MessageToDatabase,
     };
     use serde_json::json;
 
@@ -175,7 +179,7 @@ mod tests {
         ciborium::Value::serialized(&value).unwrap()
     }
 
-    fn subscribe(conn: &Connection, key: &str) {
+    fn subscribe(conn: &Arc<Connection>, key: &str) {
         conn.send_message(&MessageToDatabase::Get {
             seq: SequenceNumber::default(),
             key: key.into(),
@@ -183,7 +187,7 @@ mod tests {
         .unwrap();
     }
 
-    fn push(conn: &Connection, key: &str, value: serde_json::Value, action: Action) {
+    fn push(conn: &Arc<Connection>, key: &str, value: serde_json::Value, action: Action) {
         conn.send_message(&MessageToDatabase::Push {
             key: key.into(),
             value: json_to_cbor(value),
@@ -205,6 +209,41 @@ mod tests {
             Some(MessageFromDatabase::Init {
                 data: vec![],
                 key: "foo".into()
+            }),
+            stash.next()
+        );
+    }
+
+    #[test]
+    /// Relay messages are not sent to a receiver unless it has subscribed.
+    fn test_subscribe_relay() {
+        let db = Database::new();
+        let (stash, callback) = MessageStash::new();
+        let conn1 = db.connect(callback);
+        let conn2 = db.connect(|_| ());
+
+        push(&conn2, "foo", json!({ "bar": "baz" }), Action::Relay);
+
+        assert!(
+            stash.next().is_none(),
+            "conn1 should not receive message because it has not subscribed"
+        );
+
+        subscribe(&conn1, "foo");
+        push(&conn2, "foo", json!({ "bar": "baz" }), Action::Relay);
+
+        assert_eq!(
+            Some(MessageFromDatabase::Init {
+                key: "foo".into(),
+                data: vec![],
+            }),
+            stash.next()
+        );
+        assert_eq!(
+            Some(MessageFromDatabase::Push {
+                key: "foo".into(),
+                value: json_to_cbor(json!({ "bar": "baz" })),
+                seq: SequenceNumber(2),
             }),
             stash.next()
         );

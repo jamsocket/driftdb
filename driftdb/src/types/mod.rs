@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use ciborium::value::Value;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 pub mod key_seq_pair;
