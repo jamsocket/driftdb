@@ -1,68 +1,17 @@
 #![doc = include_str!("../README.md")]
 
-use crate::state::PersistedDb;
-use driftdb::{MessageFromDatabase, MessageToDatabase};
+use config::Configuration;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use std::collections::HashMap;
-use std::time::Duration;
-use tokio_stream::StreamExt;
-use worker::{
-    async_trait, console_warn, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures,
-    worker_sys, Cors, Env, Method, Request, Response, Result, RouteContext, WebSocket,
-    WebSocketPair,
-};
-use worker::{Router, WebsocketEvent};
+use worker::Router;
+use worker::{event, Cors, Env, Method, Request, Response, Result, RouteContext};
 
+mod config;
+mod dbroom;
 mod state;
 mod utils;
+mod websocket;
 
 const ROOM_ID_LENGTH: usize = 24;
-
-#[derive(Clone)]
-pub struct Configuration {
-    pub use_https: bool,
-    pub retention: Duration,
-}
-
-impl Configuration {
-    pub fn from_ctx(ctx: &RouteContext<()>) -> Configuration {
-        let use_https = ctx
-            .var("PROTOCOL")
-            .map(|d| d.to_string() == "HTTPS")
-            .unwrap_or(false);
-        let retention = ctx
-            .var("RETENTION_SECONDS")
-            .ok()
-            .map(|d| d.to_string())
-            .and_then(|d| d.parse::<u64>().ok())
-            .unwrap_or(60 * 60 * 24);
-        let retention = Duration::from_secs(retention);
-
-        Configuration {
-            use_https,
-            retention,
-        }
-    }
-
-    pub fn from_env(ctx: &Env) -> Configuration {
-        let use_https = ctx
-            .var("PROTOCOL")
-            .map(|d| d.to_string() == "HTTPS")
-            .unwrap_or(false);
-        let retention = ctx
-            .var("RETENTION_SECONDS")
-            .ok()
-            .map(|d| d.to_string())
-            .and_then(|d| d.parse::<u64>().ok())
-            .unwrap_or(60 * 60 * 24);
-        let retention = Duration::from_secs(retention);
-
-        Configuration {
-            use_https,
-            retention,
-        }
-    }
-}
 
 pub fn cors() -> Cors {
     Cors::new()
@@ -137,152 +86,4 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         .await?;
 
     response.with_cors(&cors())
-}
-
-#[durable_object]
-pub struct DbRoom {
-    db: PersistedDb,
-}
-
-/// A raw WebSocket is not Send or Sync, but that doesn't matter because we are compiling
-/// to WebAssembly, which is single-threaded, so we wrap it in a newtype struct which
-/// implements Send and Sync.
-#[derive(Clone)]
-struct WrappedWebSocket {
-    socket: WebSocket,
-    use_cbor: bool,
-}
-unsafe impl Send for WrappedWebSocket {}
-unsafe impl Sync for WrappedWebSocket {}
-
-impl WrappedWebSocket {
-    fn new(socket: WebSocket, use_cbor: bool) -> Self {
-        WrappedWebSocket { socket, use_cbor }
-    }
-
-    fn send(&self, message: &MessageFromDatabase) -> Result<()> {
-        if self.use_cbor {
-            let mut buffer = Vec::new();
-            ciborium::ser::into_writer(&message, &mut buffer).map_err(|_| {
-                worker::Error::RustError("Error encoding message to CBOR.".to_string())
-            })?;
-            self.socket.send_with_bytes(&buffer)?;
-        } else {
-            let message = serde_json::to_string(message)?;
-            self.socket.send_with_str(message)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl DbRoom {
-    async fn connect(&mut self, req: Request) -> Result<Response> {
-        let WebSocketPair { client, server } = WebSocketPair::new()?;
-        server.accept()?;
-
-        let db = self.db.get_db().await?;
-        let state = self.db.state.clone();
-
-        let url = req.url()?;
-
-        let query: HashMap<String, String> = url
-            .query_pairs()
-            .map(|(k, v)| (k.into_owned(), v.into_owned()))
-            .collect();
-
-        let debug = query.get("debug").map(|s| !s.is_empty()).unwrap_or(false);
-        let use_cbor = query.get("cbor").map(|s| !s.is_empty()).unwrap_or(false);
-
-        let server = WrappedWebSocket::new(server, use_cbor);
-
-        wasm_bindgen_futures::spawn_local(async move {
-            let mut event_stream = server.socket.events().expect("could not open stream");
-
-            let conn = {
-                let server = server.clone();
-                let callback = move |message: &MessageFromDatabase| {
-                    server.send(message).expect("could not send message");
-                };
-
-                if debug {
-                    db.connect_debug(callback)
-                } else {
-                    db.connect(callback)
-                }
-            };
-
-            while let Some(event) = event_stream.next().await {
-                match event.expect("received error in websocket") {
-                    WebsocketEvent::Message(msg) => {
-                        if let Some(text) = msg.text() {
-                            if let Ok(message) = serde_json::from_str::<MessageToDatabase>(&text) {
-                                // Reset the timeout for cleaning up the database.
-                                state.bump_alarm().await.expect("Error bumping alarm");
-                                conn.send_message(&message).unwrap();
-                            } else {
-                                server
-                                    .send(&MessageFromDatabase::Error {
-                                        message: format!("Could not decode message: {}", text),
-                                    })
-                                    .unwrap();
-                            }
-                        } else if let Some(bytes) = msg.bytes() {
-                            if let Ok(message) = ciborium::from_reader(bytes.as_slice()) {
-                                // Reset the timeout for cleaning up the database.
-                                state.bump_alarm().await.expect("Error bumping alarm");
-                                conn.send_message(&message).unwrap();
-                            } else {
-                                server
-                                    .send(&MessageFromDatabase::Error {
-                                        message: format!("Could not decode message: {:?}", bytes),
-                                    })
-                                    .unwrap();
-                            }
-                        } else {
-                            console_warn!("Received unknown message type.");
-                        }
-                    }
-                    WebsocketEvent::Close(_) => {
-                        break;
-                    }
-                }
-            }
-        });
-
-        Response::from_websocket(client)?.with_cors(&cors())
-    }
-}
-
-#[durable_object]
-impl DurableObject for DbRoom {
-    fn new(state: State, env: Env) -> Self {
-        let configuration = Configuration::from_env(&env);
-        Self {
-            db: PersistedDb::new(state, configuration),
-        }
-    }
-
-    async fn fetch(&mut self, mut req: Request) -> Result<Response> {
-        let url = req.url()?;
-        let (_, path) = url.path().rsplit_once('/').unwrap_or_default();
-        let method = req.method();
-        match (method, path) {
-            (Method::Get, "connect") => self.connect(req).await,
-            (Method::Post, "send") => {
-                let db = self.db.get_db().await?;
-                let conn = db.connect(|_| {});
-                let message: MessageToDatabase = req.json().await?;
-                let response = conn.send_message(&message)?;
-                Response::from_json(&response)
-            }
-            _ => Response::error("Room command not found", 404),
-        }
-    }
-
-    async fn alarm(&mut self) -> Result<Response> {
-        self.db.cleanup().await?;
-
-        Response::ok("ok")
-    }
 }
