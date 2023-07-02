@@ -1,10 +1,10 @@
 #![doc = include_str!("../README.md")]
 
 use crate::state::PersistedDb;
+use config::Configuration;
 use driftdb::{MessageFromDatabase, MessageToDatabase};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
-use std::time::Duration;
 use tokio_stream::StreamExt;
 use worker::{
     async_trait, console_warn, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures,
@@ -13,56 +13,11 @@ use worker::{
 };
 use worker::{Router, WebsocketEvent};
 
+mod config;
 mod state;
 mod utils;
 
 const ROOM_ID_LENGTH: usize = 24;
-
-#[derive(Clone)]
-pub struct Configuration {
-    pub use_https: bool,
-    pub retention: Duration,
-}
-
-impl Configuration {
-    pub fn from_ctx(ctx: &RouteContext<()>) -> Configuration {
-        let use_https = ctx
-            .var("PROTOCOL")
-            .map(|d| d.to_string() == "HTTPS")
-            .unwrap_or(false);
-        let retention = ctx
-            .var("RETENTION_SECONDS")
-            .ok()
-            .map(|d| d.to_string())
-            .and_then(|d| d.parse::<u64>().ok())
-            .unwrap_or(60 * 60 * 24);
-        let retention = Duration::from_secs(retention);
-
-        Configuration {
-            use_https,
-            retention,
-        }
-    }
-
-    pub fn from_env(ctx: &Env) -> Configuration {
-        let use_https = ctx
-            .var("PROTOCOL")
-            .map(|d| d.to_string() == "HTTPS")
-            .unwrap_or(false);
-        let retention = ctx
-            .var("RETENTION_SECONDS")
-            .ok()
-            .map(|d| d.to_string())
-            .and_then(|d| d.parse::<u64>().ok())
-            .unwrap_or(60 * 60 * 24);
-        let retention = Duration::from_secs(retention);
-
-        Configuration {
-            use_https,
-            retention,
-        }
-    }
-}
 
 pub fn cors() -> Cors {
     Cors::new()
