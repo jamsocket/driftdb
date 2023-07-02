@@ -184,7 +184,6 @@ async fn connection(
     State(room_map): State<Arc<RoomMap>>,
     Query(query): Query<ConnectionQuery>,
 ) -> Response<BoxBody> {
-    println!("Connection to room: {} {:?}", room_id, room_map);
     if let Some(database) = room_map.get(&room_id) {
         let database = database.clone();
         ws.on_upgrade(move |socket| handle_socket(socket, database, query))
