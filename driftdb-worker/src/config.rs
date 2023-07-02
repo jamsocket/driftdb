@@ -1,5 +1,5 @@
 use std::time::Duration;
-use worker::{RouteContext, Env};
+use worker::{Env, RouteContext};
 
 const HTTPS: &str = "HTTPS";
 const RETENTION_SECONDS: &str = "RETENTION_SECONDS";

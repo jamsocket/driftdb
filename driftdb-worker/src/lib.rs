@@ -6,16 +6,17 @@ use driftdb::{MessageFromDatabase, MessageToDatabase};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::collections::HashMap;
 use tokio_stream::StreamExt;
+use websocket::WrappedWebSocket;
 use worker::{
     async_trait, console_warn, durable_object, event, js_sys, wasm_bindgen, wasm_bindgen_futures,
-    worker_sys, Cors, Env, Method, Request, Response, Result, RouteContext, WebSocket,
-    WebSocketPair,
+    worker_sys, Cors, Env, Method, Request, Response, Result, RouteContext, WebSocketPair,
 };
 use worker::{Router, WebsocketEvent};
 
 mod config;
 mod state;
 mod utils;
+mod websocket;
 
 const ROOM_ID_LENGTH: usize = 24;
 
@@ -97,38 +98,6 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 #[durable_object]
 pub struct DbRoom {
     db: PersistedDb,
-}
-
-/// A raw WebSocket is not Send or Sync, but that doesn't matter because we are compiling
-/// to WebAssembly, which is single-threaded, so we wrap it in a newtype struct which
-/// implements Send and Sync.
-#[derive(Clone)]
-struct WrappedWebSocket {
-    socket: WebSocket,
-    use_cbor: bool,
-}
-unsafe impl Send for WrappedWebSocket {}
-unsafe impl Sync for WrappedWebSocket {}
-
-impl WrappedWebSocket {
-    fn new(socket: WebSocket, use_cbor: bool) -> Self {
-        WrappedWebSocket { socket, use_cbor }
-    }
-
-    fn send(&self, message: &MessageFromDatabase) -> Result<()> {
-        if self.use_cbor {
-            let mut buffer = Vec::new();
-            ciborium::ser::into_writer(&message, &mut buffer).map_err(|_| {
-                worker::Error::RustError("Error encoding message to CBOR.".to_string())
-            })?;
-            self.socket.send_with_bytes(&buffer)?;
-        } else {
-            let message = serde_json::to_string(message)?;
-            self.socket.send_with_str(message)?;
-        }
-
-        Ok(())
-    }
 }
 
 impl DbRoom {
