@@ -154,14 +154,7 @@ impl PersistedDb {
         for kv in data.entries() {
             let kv = kv?;
 
-            let (value, key) = if let Ok((value, key)) = read_old_way(&kv) {
-                // First, attempt to read JSON-style.
-                (value, key)
-            } else {
-                // If that fails, attempt to read CBOR-style.
-                let (value, key) = read_new_way(&kv)?;
-                (value, key)
-            };
+            let (value, key) = read_key_value(&kv)?;
 
             let key_and_seq = KeyAndSeq::from_str(&key)?;
             max_seq = max_seq.max(key_and_seq.seq.0);
@@ -180,14 +173,7 @@ impl PersistedDb {
     }
 }
 
-fn read_old_way(value: &JsValue) -> Result<(Value, String)> {
-    let (key, value): (String, String) = JsValueSerdeExt::into_serde(value)?;
-
-    let value: Value = serde_json::from_str(&value)?;
-    Ok((value, key))
-}
-
-fn read_new_way(value: &JsValue) -> Result<(Value, String)> {
+fn read_key_value(value: &JsValue) -> Result<(Value, String)> {
     let (key, value): (String, Vec<u8>) = JsValueSerdeExt::into_serde(value)?;
 
     let value: Value = ciborium::de::from_reader(value.as_slice())
