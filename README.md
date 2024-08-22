@@ -36,7 +36,7 @@ To test the TypeScript libraries, first run a local development server:
 Then, with the local development server running:
 
     # from repo root
-    cd js-pkg/apps/tests
+    cd js-pkg/packages/driftdb
     npm test
 
 ### Server
